@@ -86,7 +86,7 @@
 <script>
 (function(){
   'use strict';
-  var EPISODES = [
+  var DEFAULT_EPISODES = [
     {n:'025',t:'Wow English 第一季 第25集',videoId:'v0300fg10000d9k7utnog65s79brsv7g',line:0},
     {n:'026',t:'Wow English 第一季 第26集',videoId:'v0300fg10000d9kudfnog65rlkr8br8g',line:0},
     {n:'027',t:'Wow English 第一季 第27集',videoId:'v0300fg10000d9kvc4vog65hotcem630',line:0},
@@ -97,6 +97,26 @@
     {n:'032',t:'Wow English 第一季 第32集',videoId:'v0300fg10000d9mt49vog65qfmrlnqg0',line:0},
     {n:'033',t:'Wow English 第一季 第33集',videoId:'v0300fg10000d9mubpfog65njagdv0dg',line:1}
   ];
+
+  // 优先从工作台读列表：两个页面同源，localStorage 共享。
+  // 以后在工作台加 100 集，这里自动跟着有，不用维护两份。
+  function loadEpisodes(){
+    try{
+      var raw = localStorage.getItem('wow.videos');
+      if(raw){
+        var arr = JSON.parse(raw) || [];
+        var list = [];
+        arr.forEach(function(v){
+          if(v && v.videoId){
+            list.push({n:v.number||'', t:v.title||'', videoId:v.videoId, line:(typeof v.line==='number'?v.line:0)});
+          }
+        });
+        if(list.length) return list;
+      }
+    }catch(e){}
+    return DEFAULT_EPISODES;
+  }
+  var EPISODES = loadEpisodes();
   // 候选顺序：已验证可用的 540p 优先，两条线路都失败再试小文件
   function candidates(ep){
     var alt = ep.line === 0 ? 1 : 0;
@@ -257,11 +277,21 @@
 
   // 初始化：只高亮上次那集，不自动播（iOS 要求手势）
   (function init(){
+    // 支持 ?ep=025 —— 工作台每行的「熏听」按钮会把集数带过来
+    var m = (location.search || '').match(/ep=([^&]+)/);
+    if(m){
+      var target = decodeURIComponent(m[1] || '');
+      for(var i=0;i<EPISODES.length;i++){
+        if(EPISODES[i].n === target){ idx = i; break; }
+      }
+    }
     var ep = EPISODES[idx];
     elTitle.textContent = '第' + ep.n + '集';
     elHint.textContent = ep.t;
     Array.prototype.forEach.call(document.querySelectorAll('#list .chip'), function(b,k){
-      b.className = 'chip' + (k===idx ? ' on' : '');
+      var on = (k===idx);
+      b.className = 'chip' + (on ? ' on' : '');
+      if(on && b.scrollIntoView){ try{ b.scrollIntoView({inline:'center', block:'nearest'}); }catch(e){} }
     });
   })();
 })();
