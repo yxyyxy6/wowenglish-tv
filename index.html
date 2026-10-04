@@ -369,6 +369,7 @@
       var actionBtn = isDouyin
         ? '<button class="btn btn-primary btn-sm" data-play="'+item.id+'" style="padding:7px 10px">播放</button>'+
           '<button class="btn btn-blue btn-sm" data-cast="'+item.id+'" style="padding:7px 10px;background:var(--douyin);color:#fff">投屏</button>'+
+          '<button class="btn btn-ghost btn-sm" data-listen="'+item.id+'" title="熏听" style="padding:7px 8px">👂</button>'+
           '<button class="btn btn-ghost btn-sm" data-app="'+item.id+'" style="padding:7px 10px">抖音</button>'
         : '<a class="btn btn-blue btn-sm" href="'+escapeHtml(item.link)+'" target="_blank" rel="noopener" data-id="'+item.id+'" style="padding:7px 12px;text-decoration:none">打开</a>';
       d.innerHTML = '<div class="'+numClass+'">'+escapeHtml(item.number)+'</div>'+
@@ -398,6 +399,17 @@
         var id=b.getAttribute('data-cast');
         var v=state.videos.find(function(x){return x.id===id;});
         if(v) castDouyin(v);
+      });
+    });
+
+    // 熏听按钮：带这一集直接进熏听页（黑屏+循环+电视投屏都在那一页）
+    box.querySelectorAll('[data-listen]').forEach(function(b){
+      b.addEventListener('click',function(){
+        var id=b.getAttribute('data-listen');
+        var v=state.videos.find(function(x){return x.id===id;});
+        if(!v) return;
+        recordLog(v.title);
+        location.href = 'listen.html?ep=' + encodeURIComponent(v.number || '');
       });
     });
 
@@ -735,11 +747,10 @@
     state.currentVideoId = null;
     renderVideos();
   });
+  // 熏听按钮：统一跳到熏听页（页面内播放器被 Safari 限速，熏听页自带黑屏+循环+电视投屏）
   btnListen.addEventListener('click',function(){
-    state.listenMode = !state.listenMode;
-    ls.set('wow.listenMode',state.listenMode);
-    $('#listenToggle').checked = state.listenMode;
-    if(state.listenMode) enterListenMode(); else exitListenMode();
+    var cur = state.videos.find(function(x){return x.id===state.currentVideoId;});
+    location.href = 'listen.html' + (cur && cur.number ? ('?ep='+encodeURIComponent(cur.number)) : '');
   });
 
   function enterListenMode(){
