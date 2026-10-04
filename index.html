@@ -200,6 +200,13 @@
         </div>
         <label class="switch"><input type="checkbox" id="listenToggle"><span class="slider"></span></label>
       </div>
+      <div class="row" style="padding:12px;background:var(--card);border-radius:12px">
+        <div>
+          <div style="font-size:14px;font-weight:600">播放走原生播放器</div>
+          <div class="muted" style="margin-top:2px">推荐开启：和「投屏」同一通道，全速不掉到十几KB。关掉则回到页面内播放器（设熏听需用它）</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="nativeToggle"><span class="slider"></span></label>
+      </div>
     </div>
 
     <div id="logSection" class="hidden" style="margin-bottom:14px">
@@ -282,6 +289,7 @@
   var state = {
     logsEnabled: ls.get('wow.logsEnabled',false),
     listenMode: ls.get('wow.listenMode',false),
+    nativePlay: ls.get('wow.nativePlay',true),
     videos: ls.get('wow.videos',[]),
     logs: ls.get('wow.logs',[]),
     currentVideoId: null
@@ -374,12 +382,13 @@
       box.appendChild(d);
     });
 
-    // 抖音源播放按钮（页面内 <video> 播放）
+    // 抖音源播放按钮：默认走原生播放器通道（全速）；关掉开关则回到页面内播放器
     box.querySelectorAll('[data-play]').forEach(function(b){
       b.addEventListener('click',function(){
         var id=b.getAttribute('data-play');
         var v=state.videos.find(function(x){return x.id===id;});
-        if(v) playDouyin(v);
+        if(!v) return;
+        if(state.nativePlay) castDouyin(v); else playDouyin(v);
       });
     });
 
@@ -765,6 +774,7 @@
   var settingsModal = $('#settingsModal');
   $('#fabBtn').addEventListener('click',function(){
     $('#logToggle').checked = state.logsEnabled;
+    $('#nativeToggle').checked = state.nativePlay;
     renderLogs();
     settingsModal.classList.remove('hidden');
   });
@@ -781,6 +791,10 @@
     if(player.src){
       if(state.listenMode) enterListenMode(); else exitListenMode();
     }
+  });
+  $('#nativeToggle').addEventListener('change',function(e){
+    state.nativePlay = e.target.checked;
+    ls.set('wow.nativePlay',state.nativePlay);
   });
 
   // ---- 日志 ----
