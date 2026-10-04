@@ -61,7 +61,7 @@
   <div class="mid">
     <div class="ear">👂</div>
     <div class="num" id="title">熏听模式</div>
-    <div class="sub" id="hint">选一集，点 ▶ 开始（首次加载可能要十几秒）</div>
+    <div class="sub" id="hint">选一集，点 ▶ 全速播放</div>
   </div>
   <div class="ctrls" style="padding-bottom:8px">
     <button class="btn" id="prev" title="上一集">⏮</button>
@@ -72,9 +72,9 @@
     <button class="wide" id="tvBtn">📺 电视投屏（原生播放器 · 不掉速）</button>
   </div>
   <div class="row" id="list"></div>
-  <p class="tips">长时间熏听：把 iPhone「设置→显示与亮度→自动锁定」设为「永不」，避免熄屏断音</p>
+  <p class="tips">想要电视黑屏：播放后用遥控器关掉电视画面（仅听音频 / 熄屏播放）</p>
   <div class="foot">
-    <span id="msg">音频用小文件优先，播不动自动换源</span>
+    <span id="msg">全部走原生通道，不再受页面内限速影响</span>
     <div class="seg" id="modeSeg">
       <button data-m="single" class="on">单集循环</button>
       <button data-m="seq">连续播放</button>
@@ -216,22 +216,19 @@
     Array.prototype.forEach.call(document.querySelectorAll('#list .chip'), function(b,k){
       b.className = 'chip' + (k===idx ? ' on' : '');
     });
-    clearTimeout(loadTimer); gen++; // 作废旧的加载流程
-    startPlay(); // 选集即播（用户手势内）
+    clearTimeout(loadTimer); gen++; // 作废旧的加载流程（选择不自动播，交给手势处理）
   }
 
+  // ▶ 同样走原生通道（window.open）：页面内播放器已被 Safari 限速到十几KB，彻底弃用
   elPlay.addEventListener('click', function(){
-    if(player.paused){
-      if(!player.src){ startPlay(); return; }
-      var p = player.play();
-      if(p && p.catch){
-        p.catch(function(){ startPlay(); });
-      }
-      setPlaying(true);
-    }else{
-      player.pause();
-    }
+    var ep = EPISODES[idx];
+    state_currentIndex(idx);
+    window.open(url(ep.videoId, ep.line, '540p'), '_blank');
+    tip('已用原生播放器全速打开。想要纯黑屏：用电视遥控器关掉画面（仅听音频/熄屏播放）');
   });
+  function state_currentIndex(i){
+    try{ localStorage.setItem('wow.listenIdx', String(i)); }catch(e){}
+  }
   document.getElementById('prev').addEventListener('click', function(){ pick(idx-1); });
   document.getElementById('next').addEventListener('click', function(){ pick(idx+1); });
 
