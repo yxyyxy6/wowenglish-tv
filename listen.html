@@ -61,7 +61,7 @@
   <div class="mid">
     <div class="ear">👂</div>
     <div class="num" id="title">熏听模式</div>
-    <div class="sub" id="hint">选一集，点 ▶ 全速播放</div>
+    <div class="sub" id="hint">选一集，点 ▶ 开始（首次缓冲约需几十秒）</div>
   </div>
   <div class="ctrls" style="padding-bottom:8px">
     <button class="btn" id="prev" title="上一集">⏮</button>
@@ -72,9 +72,9 @@
     <button class="wide" id="tvBtn">📺 电视投屏（原生播放器 · 不掉速）</button>
   </div>
   <div class="row" id="list"></div>
-  <p class="tips">想要电视黑屏：播放后用遥控器关掉电视画面（仅听音频 / 熄屏播放）</p>
+  <p class="tips">电视黑屏出声：点▶播放 → 下拉控制中心 → 隔空播放 → 选电视作为音频输出（别用「屏幕镜像」）</p>
   <div class="foot">
-    <span id="msg">全部走原生通道，不再受页面内限速影响</span>
+    <span id="msg">▶ 本机播放并循环 · 📺 电视全速播放（会显示画面）</span>
     <div class="seg" id="modeSeg">
       <button data-m="single" class="on">单集循环</button>
       <button data-m="seq">连续播放</button>
@@ -219,16 +219,19 @@
     clearTimeout(loadTimer); gen++; // 作废旧的加载流程（选择不自动播，交给手势处理）
   }
 
-  // ▶ 同样走原生通道（window.open）：页面内播放器已被 Safari 限速到十几KB，彻底弃用
+  // ▶ 用页面内音频播放（配合同步输出到电视见下方说明）
   elPlay.addEventListener('click', function(){
-    var ep = EPISODES[idx];
-    state_currentIndex(idx);
-    window.open(url(ep.videoId, ep.line, '540p'), '_blank');
-    tip('已用原生播放器全速打开。想要纯黑屏：用电视遥控器关掉画面（仅听音频/熄屏播放）');
+    if(!player.src){ startPlay(); return; }
+    if(player.paused){
+      var p = player.play();
+      if(p && p.catch){
+        p.catch(function(){ startPlay(); });
+      }
+      setPlaying(true);
+    }else{
+      player.pause();
+    }
   });
-  function state_currentIndex(i){
-    try{ localStorage.setItem('wow.listenIdx', String(i)); }catch(e){}
-  }
   document.getElementById('prev').addEventListener('click', function(){ pick(idx-1); });
   document.getElementById('next').addEventListener('click', function(){ pick(idx+1); });
 
