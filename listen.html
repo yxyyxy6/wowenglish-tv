@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>熏听 · Wow English TV</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:#000;color:#fff;height:100%;overflow:hidden}
+  body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",Helvetica,sans-serif;
+       display:flex;flex-direction:column;user-select:none}
+  /* 视频：铺满但被黑色遮罩盖住 → 电视看是全黑，系统是"正在播放"，防止锁屏 */
+  #player{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;background:#000}
+  #veil{position:fixed;inset:0;background:#000;z-index:1}
+  .ui{position:relative;z-index:2;flex:1;display:flex;flex-direction:column;
+      padding:calc(env(safe-area-inset-top) + 14px) 16px calc(env(safe-area-inset-bottom) + 16px);
+      transition:opacity .5s ease}
+  .ui.dim{opacity:0;pointer-events:none}
+  .top{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:24px}
+  .back{color:rgba(255,255,255,.45);text-decoration:none;font-size:13px}
+  .now{color:rgba(255,255,255,.5);font-size:13px;text-align:right}
+  .mid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+  .ear{font-size:56px;filter:grayscale(.2)}
+  .num{font-size:30px;font-weight:700;letter-spacing:1px}
+  .sub{font-size:13px;color:rgba(255,255,255,.45)}
+  .ctrls{display:flex;align-items:center;justify-content:center;gap:34px;padding:6px 0 22px}
+  .btn{background:rgba(255,255,255,.08);border:0;color:#fff;font-size:20px;width:56px;height:56px;
+       border-radius:50%;display:flex;align-items:center;justify-content:center}
+  .btn.main{width:76px;height:76px;font-size:30px;background:rgba(255,255,255,.14)}
+  .btn:active{transform:scale(.94)}
+  .row{display:flex;gap:8px;padding:2px 0 12px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .chip{flex:0 0 auto;padding:8px 14px;border-radius:999px;background:rgba(255,255,255,.08);
+        color:rgba(255,255,255,.7);font-size:13px;border:0;white-space:nowrap}
+  .chip.on{background:#fff;color:#000;font-weight:600}
+  .foot{display:flex;align-items:center;justify-content:space-between;gap:10px;
+        color:rgba(255,255,255,.4);font-size:12px;padding-bottom:4px}
+  .seg{display:flex;border:1px solid rgba(255,255,255,.18);border-radius:999px;overflow:hidden}
+  .seg button{border:0;background:transparent;color:rgba(255,255,255,.5);font-size:12px;padding:6px 12px}
+  .seg button.on{background:#fff;color:#000;font-weight:600}
+  #tip{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 78px);text-align:center;
+       color:#ffb4b4;font-size:12px;z-index:3;display:none}
+</style>
+</head>
+<body>
+<video id="player" playsinline webkit-playsinline preload="auto" x-webkit-airplay="allow"></video>
+<div id="veil"></div>
+
+<div class="ui" id="ui">
+  <div class="top">
+    <a class="back" href="index.html">← 工作台</a>
+    <div class="now" id="status">就绪</div>
+  </div>
+  <div class="mid">
+    <div class="ear">👂</div>
+    <div class="num" id="title">熏听模式</div>
+    <div class="sub" id="hint">画面已黑屏 · 请选择要听的那一集</div>
+  </div>
+  <div class="ctrls">
+    <button class="btn" id="prev" title="上一集">⏮</button>
+    <button class="btn main" id="play" title="播放/暂停">▶</button>
+    <button class="btn" id="next" title="下一集">⏭</button>
+  </div>
+  <div class="row" id="list"></div>
+  <div class="foot">
+    <span id="msg">低码率优先加载中…</span>
+    <div class="seg" id="modeSeg">
+      <button data-m="single" class="on">单集循环</button>
+      <button data-m="seq">连续播放</button>
+    </div>
+  </div>
+</div>
+<div id="tip"></div>
+
+<script>
+(function(){
+  'use strict';
+  var EPISODES = [
+    {n:'025',t:'Wow English 第一季 第25集',videoId:'v0300fg10000d9k7utnog65s79brsv7g',line:0},
+    {n:'026',t:'Wow English 第一季 第26集',videoId:'v0300fg10000d9kudfnog65rlkr8br8g',line:0},
+    {n:'027',t:'Wow English 第一季 第27集',videoId:'v0300fg10000d9kvc4vog65hotcem630',line:0},
+    {n:'028',t:'Wow English 第一季 第28集',videoId:'v0300fg10000d9lhbefog65ofmnek4k0',line:0},
+    {n:'029',t:'Wow English 第一季 第29集',videoId:'v0300fg10000da60lvfog65n66njripg',line:1},
+    {n:'030',t:'Wow English 第一季 第30集',videoId:'v0300fg10000d9m9h5vog65vlupu1g00',line:0},
+    {n:'031',t:'Wow English 第一季 第31集',videoId:'v0300fg10000d9ma2hvog65mgb2r5o60',line:0},
+    {n:'032',t:'Wow English 第一季 第32集',videoId:'v0300fg10000d9mt49vog65qfmrlnqg0',line:0},
+    {n:'033',t:'Wow English 第一季 第33集',videoId:'v0300fg10000d9mubpfog65njagdv0dg',line:1}
+  ];
+  // 低码率优先：音频用不上画面，越小加载越快；拿不到就逐级回退到已验证的 540p
+  var RATIOS = ['360p','480p','540p'];
+
+  var player = document.getElementById('player');
+  var elTitle = document.getElementById('title');
+  var elHint  = document.getElementById('hint');
+  var elStatus= document.getElementById('status');
+  var elPlay  = document.getElementById('play');
+  var elMsg   = document.getElementById('msg');
+  var elTip   = document.getElementById('tip');
+  var ui      = document.getElementById('ui');
+
+  var idx = 0, mode = 'single', loading = false;
+  try{
+    var saved = parseInt(localStorage.getItem('wow.listenIdx'),10);
+    if(!isNaN(saved) && saved>=0 && saved<EPISODES.length) idx = saved;
+    var m = localStorage.getItem('wow.listenMode');
+    if(m==='single'||m==='seq') mode = m;
+  }catch(e){}
+
+  function url(vid,line,ratio){
+    return 'https://aweme.snssdk.com/aweme/v1/playwm/?video_id='+vid
+         + '&ratio='+ratio+'&line='+line;
+  }
+  function candidates(ep){
+    var alt = ep.line === 0 ? 1 : 0, out = [];
+    for(var i=0;i<RATIOS.length;i++){
+      out.push({l:ep.line,r:RATIOS[i]});
+      out.push({l:alt     ,r:RATIOS[i]});
+    }
+    return out;
+  }
+  function setPlaying(on){ elPlay.textContent = on ? '⏸' : '▶'; }
+  function statusTx(s){ elStatus.textContent = s; }
+
+  // 逐个候选源尝试：能缓冲就锁定，报错/超时就换下一个
+  function load(ep){
+    loading = true;
+    var list = candidates(ep), cursor = 0, timer = null, settled = false;
+    elMsg.textContent = '低码率优先加载…';
+    function cleanup(){
+      if(timer){ clearTimeout(timer); timer = null; }
+      player.removeEventListener('canplay', ok);
+      player.removeEventListener('error', bad);
+    }
+    function ok(){
+      if(settled) return;
+      settled = true; cleanup(); loading = false;
+      statusTx('播放中 · ' + (list[cursor] ? list[cursor].r : ''));
+      elMsg.textContent = '源已就绪';
+    }
+    function bad(){ if(!settled) next(); }
+    function next(){
+      cursor++;
+      if(cursor >= list.length){
+        settled = true; cleanup(); loading = false;
+        statusTx('加载失败');
+        elMsg.textContent = '全部线路都取不到，点 ▶ 重试';
+        return;
+      }
+      attempt();
+    }
+    function attempt(){
+      settled = false;
+      var c = list[cursor];
+      player.src = url(ep.videoId, c.l, c.r);
+      player.load();
+      player.addEventListener('canplay', ok);
+      player.addEventListener('error', bad);
+      if(timer) clearTimeout(timer);
+      timer = setTimeout(next, 9000); // 单源最多等 9 秒
+    }
+    attempt();
+  }
+
+  function pick(i, autoplay){
+    idx = (i + EPISODES.length) % EPISODES.length;
+    try{ localStorage.setItem('wow.listenIdx', String(idx)); }catch(e){}
+    var ep = EPISODES[idx];
+    elTitle.textContent = '第' + ep.n + '集';
+    elHint.textContent = ep.t;
+    Array.prototype.forEach.call(document.querySelectorAll('#list .chip'), function(b,k){
+      b.className = 'chip' + (k===idx ? ' on' : '');
+    });
+    load(ep);
+    if(autoplay){
+      var p = player.play();
+      if(p && p.then){
+        p.then(function(){ setPlaying(true); })
+         .catch(function(){ setPlaying(false); tip('iPhone 要求点一下才能播，请点 ▶'); });
+      }
+    }
+  }
+  function tip(t){
+    elTip.textContent = t; elTip.style.display = 'block';
+    setTimeout(function(){ elTip.style.display = 'none'; }, 3200);
+  }
+
+  elPlay.addEventListener('click', function(){
+    if(player.paused){
+      if(!player.src){ pick(idx, true); return; }
+      var p = player.play();
+      if(p && p.then) p.then(function(){ setPlaying(true); })
+                       .catch(function(){ tip('播不出来，正在换源…'); load(EPISODES[idx]); });
+      setPlaying(true);
+    }else{
+      player.pause(); setPlaying(false); statusTx('已暂停');
+    }
+  });
+  document.getElementById('prev').addEventListener('click', function(){ pick(idx-1, !player.paused); });
+  document.getElementById('next').addEventListener('click', function(){ pick(idx+1, !player.paused); });
+
+  player.addEventListener('play',  function(){ setPlaying(true);  statusTx('播放中'); });
+  player.addEventListener('pause', function(){ setPlaying(false); statusTx('已暂停'); });
+  player.addEventListener('waiting',function(){ elMsg.textContent = '缓冲中…'; });
+  player.addEventListener('playing',function(){ elMsg.textContent = '源已就绪'; });
+  player.addEventListener('ended', function(){
+    if(mode === 'single'){ player.currentTime = 0; player.play(); }
+    else { pick(idx+1, true); }
+  });
+
+  // 选集
+  var listEl = document.getElementById('list');
+  EPISODES.forEach(function(ep,i){
+    var b = document.createElement('button');
+    b.className = 'chip'; b.textContent = '第' + ep.n + '集';
+    b.addEventListener('click', function(){ pick(i, true); });
+    listEl.appendChild(b);
+  });
+  // 模式
+  var seg = document.getElementById('modeSeg');
+  Array.prototype.forEach.call(seg.querySelectorAll('button'), function(b){
+    b.className = (b.getAttribute('data-m') === mode) ? 'on' : '';
+    b.addEventListener('click', function(){
+      mode = b.getAttribute('data-m');
+      try{ localStorage.setItem('wow.listenMode', mode); }catch(e){}
+      Array.prototype.forEach.call(seg.querySelectorAll('button'), function(x){
+        x.className = (x.getAttribute('data-m') === mode) ? 'on' : '';
+      });
+      elMsg.textContent = mode === 'single' ? '单集循环：反复听这一集' : '连续播放：自动听下一集';
+    });
+  });
+
+  // 静止若干秒后控制淡出 → 电视只剩纯黑；点一下呼出
+  var idle = null;
+  function wake(){
+    ui.classList.remove('dim');
+    if(idle) clearTimeout(idle);
+    idle = setTimeout(function(){ ui.classList.add('dim'); }, 8000);
+  }
+  document.addEventListener('click', wake);
+  document.addEventListener('touchstart', wake, {passive:true});
+  wake();
+
+  // 切到后台不干预系统策略，切回前台时刷新按钮显示
+  document.addEventListener('visibilitychange', function(){
+    // 切后台不干预系统行为，回前台时刷新显示状态
+    if(!document.hidden) setPlaying(!player.paused);
+  });
+
+  // 首次进入只选中，不自动播（iOS 要求手势）
+  pick(idx, false);
+})();
+</script>
+</body>
+</html>
