@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Wow投屏台">
+<title>Wow English 投屏台</title>
+<style>
+  :root{
+    --bg:#0f1115; --card:#1a1d24; --card2:#22262f; --txt:#f2f4f7; --sub:#9aa3b2;
+    --accent:#ff9f0a; --accent2:#0a84ff; --danger:#ff453a; --ok:#30d158;
+    --douyin:#fe2c55;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif;
+    -webkit-font-smoothing:antialiased; overscroll-behavior:none;}
+  body{padding:max(env(safe-area-inset-top),12px) 14px max(env(safe-area-inset-bottom),20px); min-height:100vh;}
+  h1{font-size:19px;margin:0 0 10px;font-weight:700;text-align:center;letter-spacing:.5px;}
+  .sub{text-align:center;color:var(--sub);font-size:12px;margin-bottom:14px;}
+  .card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:12px;}
+  .card h2{font-size:15px;margin:0 0 10px;font-weight:700;display:flex;align-items:center;gap:7px;}
+  .card h2 .ic{color:var(--accent);}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .muted{color:var(--sub);font-size:12px;line-height:1.55;}
+  .link{color:var(--accent2);word-break:break-all;font-size:12px;font-family:ui-monospace,monospace;}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:11px;
+    font-size:14px;font-weight:600;padding:11px 16px;cursor:pointer;width:100%;}
+  .btn-primary{background:var(--accent);color:#1a1a1a;}
+  .btn-blue{background:var(--accent2);color:#fff;}
+  .btn-ghost{background:var(--card2);color:var(--txt);}
+  .btn-danger{background:rgba(255,69,58,.15);color:var(--danger);}
+  .btn-douyin{background:var(--douyin);color:#fff;}
+  .btn-sm{padding:8px 12px;font-size:13px;width:auto;}
+  .switch{position:relative;width:48px;height:28px;flex:none;}
+  .switch input{opacity:0;width:0;height:0;}
+  .slider{position:absolute;inset:0;background:var(--card2);border-radius:999px;transition:background .15s;}
+  .slider:before{content:"";position:absolute;width:22px;height:22px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .15s;}
+  .switch input:checked + .slider{background:var(--ok);}
+  .switch input:checked + .slider:before{transform:translateX(20px);}
+  .vlist{display:flex;flex-direction:column;gap:8px;}
+  .vitem{display:flex;align-items:center;gap:11px;background:var(--card2);border-radius:12px;padding:11px 13px;}
+  .vitem.playing{border:2px solid var(--accent);padding:9px 11px;}
+  .vnum{font-weight:800;font-size:15px;font-family:ui-monospace,monospace;width:42px;height:42px;
+    display:flex;align-items:center;justify-content:center;background:rgba(255,159,10,.13);color:var(--accent);border-radius:10px;flex:none;}
+  .vnum.dy{background:rgba(254,44,85,.13);color:var(--douyin);}
+  .vname{font-size:14px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .vtag{font-size:10px;color:var(--sub);}
+  .vtag.dy{color:var(--douyin);}
+  .empty{text-align:center;padding:26px 10px;color:var(--sub);}
+  .empty .ic{font-size:34px;display:block;margin-bottom:6px;}
+  .steps{counter-reset:s;list-style:none;padding:0;margin:0;}
+  .steps li{position:relative;padding:6px 0 6px 28px;font-size:13px;color:var(--sub);line-height:1.5;}
+  .steps li:before{counter-increment:s;content:counter(s);position:absolute;left:0;top:6px;width:19px;height:19px;
+    background:rgba(10,132,255,.18);color:var(--accent2);border-radius:50%;font-size:11px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;}
+  .hidden{display:none!important;}
+  .input{width:100%;background:var(--card2);border:1px solid #333842;color:var(--txt);border-radius:10px;
+    padding:11px 13px;font-size:14px;font-family:inherit;}
+  .input::placeholder{color:#666;}
+  .label{font-size:12px;color:var(--sub);margin-bottom:5px;display:block;}
+  .seg{display:flex;gap:0;background:var(--card2);border-radius:10px;padding:3px;margin-bottom:12px;}
+  .seg button{flex:1;border:0;background:transparent;color:var(--sub);font-size:13px;font-weight:600;padding:9px 0;border-radius:8px;cursor:pointer;}
+  .seg button.active{background:var(--card);color:var(--txt);}
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center;z-index:50;}
+  .modal{background:var(--card);width:100%;max-width:480px;border-radius:18px 18px 0 0;padding:20px 16px max(env(safe-area-inset-bottom),20px);max-height:85vh;overflow-y:auto;}
+  .sheet-handle{width:36px;height:4px;background:#444;border-radius:2px;margin:0 auto 14px;}
+  .player-wrap{position:relative;background:#000;border-radius:14px;overflow:hidden;margin-bottom:10px;}
+  .player-wrap video{display:block;width:100%;max-height:42vh;background:#000;}
+  .listen-bg{aspect-ratio:16/9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+    background:linear-gradient(135deg,#1e3a5f,#2d5a87);}
+  .listen-bg .big{font-size:46px;}
+  .ctrl{display:flex;justify-content:center;gap:18px;padding:10px 0 2px;}
+  .ctrl button{width:54px;height:54px;border-radius:50%;border:0;background:var(--card2);color:var(--txt);
+    font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .ctrl button.primary{background:var(--accent);color:#1a1a1a;}
+  .airplay-hint{font-size:11px;color:var(--accent2);text-align:center;margin-top:6px;}
+  .log-item{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #2a2e36;}
+  .log-item:last-child{border:0;}
+  .log-date{font-size:11px;color:var(--sub);font-family:ui-monospace,monospace;}
+  .log-name{font-size:13px;}
+  .warn{background:rgba(255,159,10,.1);border:1px solid rgba(255,159,10,.25);border-radius:12px;padding:11px 13px;color:#ffd60a;font-size:12px;line-height:1.5;margin-bottom:12px;}
+  .warn b{color:#ff9f0a;}
+  .fab{position:fixed;right:16px;bottom:max(env(safe-area-inset-bottom),16px);width:50px;height:50px;border-radius:50%;
+    background:var(--accent);color:#1a1a1a;border:0;font-size:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.4);z-index:20;}
+  .src-badge{font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;flex:none;}
+  .src-badge.dy{background:rgba(254,44,85,.15);color:var(--douyin);}
+  .src-badge.cloud{background:rgba(10,132,255,.15);color:var(--accent2);}
+  .loading-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:60;}
+  .loading-box{background:var(--card);border-radius:16px;padding:24px 32px;text-align:center;}
+  .spinner{width:32px;height:32px;border:3px solid var(--card2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+
+<h1>Wow English 投屏台</h1>
+<div class="sub">iPhone 专属 · 抖音内联播放 + 阿里云盘视频源 · 家长手动操作</div>
+
+<!-- ============ 播放器 ============ -->
+<div class="card" id="playerCard">
+  <div class="player-wrap" id="playerWrap">
+    <video id="player" playsinline webkit-playsinline controls x-webkit-airplay="allow" preload="metadata"></video>
+  </div>
+  <div class="airplay-hint" id="airplayHint">▼ 点下方 📡 按钮选电视投屏</div>
+  <div class="ctrl">
+    <button id="btnPlay" class="primary">▶</button>
+    <button id="btnStop">⏹</button>
+    <button id="btnAirplay" title="AirPlay投屏" style="background:var(--accent2);color:#fff;font-size:18px;">📡</button>
+    <button id="btnListen" title="熏听模式">👂</button>
+  </div>
+  <p class="muted" style="margin:8px 0 0;text-align:center">▶播放/暂停 · ⏹停止 · 📡投屏 · 👂熏听模式</p>
+</div>
+
+<!-- ============ 剧集列表 ============ -->
+<div class="card">
+  <div class="row" style="margin-bottom:10px">
+    <h2 style="margin:0"><span class="ic">📁</span>剧集列表</h2>
+    <button class="btn btn-ghost btn-sm" id="addBtn">+ 添加</button>
+  </div>
+  <div class="warn" style="margin-bottom:10px">
+    <b style="color:var(--douyin)">投屏卡住就点「抖音」</b>：先连屏幕镜像 → 点「抖音」唤起抖音App播放 → App画面镜像到电视；「投屏」按钮作为备用
+  </div>
+  <div class="vlist" id="videoList"></div>
+  <div class="empty" id="videoEmpty">
+    <span class="ic">📭</span>
+    <div>列表为空</div>
+    <div style="font-size:12px;margin-top:4px">点右上「+ 添加」录入剧集</div>
+  </div>
+</div>
+
+<!-- ============ 阿里云盘分享入口 ============ -->
+<div class="card">
+  <h2><span class="ic">🔗</span>阿里云盘文件夹</h2>
+  <div class="muted" style="margin-bottom:6px">永久公开分享文件夹：<b style="color:var(--txt)">Wow English</b></div>
+  <div class="link" style="margin-bottom:10px">https://www.alipan.com/s/PF3MHZBSsyt</div>
+  <div style="display:flex;gap:8px">
+    <button class="btn btn-ghost btn-sm" style="flex:1" id="copyFolderBtn">复制链接</button>
+    <a class="btn btn-blue btn-sm" style="flex:1;text-decoration:none" href="https://www.alipan.com/s/PF3MHZBSsyt" target="_blank" rel="noopener">打开文件夹</a>
+  </div>
+</div>
+
+<!-- ============ 投屏指引 ============ -->
+<div class="card">
+  <h2><span class="ic">📋</span>投屏步骤（必读！）</h2>
+  <div class="warn" style="margin-bottom:10px">
+    <b>⚠ 投电视卡住（几十KB）？请用「抖音」按钮</b><br>
+    • <b style="color:var(--douyin)">「抖音」</b>= 唤起抖音App播放该集，视频源最快，App画面可镜像 ★推荐<br>
+    • 「投屏」= Safari原生播放器播直链（若一直转圈加载，说明冷存储慢，改用抖音）<br>
+    • 「播放」= 手机上直接看，投电视会卡<br>
+    • 原因：这批视频存在抖音冷存储，第三方直链拉流慢；抖音App内部走热CDN最快
+  </div>
+  <ul class="steps">
+    <li>先连屏幕镜像：下拉控制中心 → 屏幕镜像 → 选电视/乐播</li>
+    <li>回到工作台，点剧集右侧<b style="color:var(--douyin)">「投屏」</b>按钮</li>
+    <li>Safari自动用<b>原生播放器全屏播放</b>视频</li>
+    <li>画面自动通过屏幕镜像传到电视</li>
+    <li>看完点返回，选下一集继续投屏</li>
+  </ul>
+</div>
+
+<!-- ============ 加载失败排查 ============ -->
+<div class="card">
+  <h2><span class="ic">🔧</span>加载失败排查</h2>
+  <ul class="steps">
+    <li><b>抖音视频不播放</b>：抖音CDN链接约1小时过期，重新点「播放」会自动刷新</li>
+    <li><b>提示解析失败</b>：抖音分享链接可能失效，重新获取该集的抖音分享链接</li>
+    <li>阿里云盘页面空白：等几秒让页面加载完成，或刷新</li>
+    <li>投屏看不到画面：确认iPhone与电视在同一Wi-Fi，电视已开启AirPlay接收</li>
+    <li>卡顿：切换Wi-Fi频段（5GHz优先），或让视频缓冲几秒再播</li>
+  </ul>
+</div>
+
+<!-- ============ 设置浮层 ============ -->
+<button class="fab" id="fabBtn" aria-label="设置">⚙️</button>
+
+<div class="modal-bg hidden" id="settingsModal">
+  <div class="modal">
+    <div class="sheet-handle"></div>
+    <h2 style="font-size:16px;margin:0 0 14px">设置</h2>
+
+    <div class="card" style="padding:0;background:transparent;margin:0 0 14px">
+      <div class="row" style="padding:12px;background:var(--card);border-radius:12px;margin-bottom:8px">
+        <div>
+          <div style="font-size:14px;font-weight:600">简易观看日志</div>
+          <div class="muted" style="margin-top:2px">仅记录日期+剧名，无分析统计</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="logToggle"><span class="slider"></span></label>
+      </div>
+      <div class="row" style="padding:12px;background:var(--card);border-radius:12px">
+        <div>
+          <div style="font-size:14px;font-weight:600">一键熏听模式</div>
+          <div class="muted" style="margin-top:2px">关画面·纯色静态背景·循环音频</div>
+        </div>
+        <label class="switch"><input type="checkbox" id="listenToggle"><span class="slider"></span></label>
+      </div>
+    </div>
+
+    <div id="logSection" class="hidden" style="margin-bottom:14px">
+      <div class="card" style="padding:14px">
+        <div class="row" style="margin-bottom:8px">
+          <h2 style="margin:0;font-size:14px">观看日志</h2>
+          <button class="btn btn-danger btn-sm" id="clearLogBtn">清空</button>
+        </div>
+        <div id="logList"></div>
+        <div class="empty hidden" id="logEmpty" style="padding:14px 0">
+          <div style="font-size:13px">暂无记录</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:14px">
+      <div class="muted" style="line-height:1.6">
+        <b style="color:var(--txt)">无自动开播 / 无倒计时 / 无次数时长限制 / 无学习功能 / 无自动下载</b><br>
+        播放与停止全由家长手动操作。
+      </div>
+    </div>
+
+    <button class="btn btn-ghost" id="closeSettings" style="margin-top:12px">关闭</button>
+  </div>
+</div>
+
+<!-- ============ 添加剧集弹层 ============ -->
+<div class="modal-bg hidden" id="addModal">
+  <div class="modal">
+    <div class="sheet-handle"></div>
+    <h2 style="font-size:16px;margin:0 0 14px">添加剧集</h2>
+
+    <div class="seg" id="srcSeg">
+      <button class="active" data-src="douyin">抖音源</button>
+      <button data-src="cloud">云盘源</button>
+    </div>
+
+    <label class="label">视频编号（如 006）</label>
+    <input class="input" id="addNumber" placeholder="006" style="margin-bottom:12px">
+    <label class="label">剧集名称（可留空）</label>
+    <input class="input" id="addTitle" placeholder="Wow English 006" style="margin-bottom:12px">
+
+    <div id="douyinInput">
+      <label class="label">抖音分享链接（含「复制打开抖音」文字也可直接粘贴）</label>
+      <input class="input" id="addDouyinLink" placeholder="https://v.douyin.com/xxxxxxx 或 整段分享文字" style="margin-bottom:12px">
+      <div class="muted" style="margin-bottom:12px;font-size:11px">粘贴抖音分享链接或整段分享文字均可，会自动提取视频ID</div>
+    </div>
+
+    <div id="cloudInput" class="hidden">
+      <label class="label">单集阿里云盘分享链接</label>
+      <input class="input" id="addLink" placeholder="https://www.alipan.com/s/xxxxxxxx" style="margin-bottom:12px">
+    </div>
+
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost" style="flex:1" id="cancelAdd">取消</button>
+      <button class="btn btn-primary" style="flex:1" id="confirmAdd">添加</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 解析中浮层 ============ -->
+<div class="loading-overlay hidden" id="parseLoading">
+  <div class="loading-box">
+    <div class="spinner"></div>
+    <div style="font-size:14px;color:var(--sub)">正在解析抖音链接…</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var $ = function(s){return document.querySelector(s);};
+  var ls = {
+    get:function(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},
+    set:function(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+  };
+
+  // ---- 状态 ----
+  var currentPlayV = null; // 当前页面内播放的视频（用于线路回退）
+  var state = {
+    logsEnabled: ls.get('wow.logsEnabled',false),
+    listenMode: ls.get('wow.listenMode',false),
+    videos: ls.get('wow.videos',[]),
+    logs: ls.get('wow.logs',[]),
+    currentVideoId: null
+  };
+
+  // ---- 抖音 video_id → 播放URL ----
+  // aweme.snssdk.com 的 playwm 接口每次请求都会302重定向到新鲜CDN URL
+  // video_id 永不过期，CDN URL 约1小时过期，但每次点播放都会获取新的
+  // line 参数：不同视频分布在不同CDN线路，部分视频 line=0 失效需 line=1
+  function douyinPlayUrl(vid, line){
+    line = (line===undefined || line===null) ? 0 : line;
+    return 'https://aweme.snssdk.com/aweme/v1/playwm/?video_id='+vid+'&ratio=540p&line='+line;
+  }
+
+  // ---- 从抖音分享文字/链接中提取短链接 ----
+  function extractDouyinUrl(text){
+    if(!text) return null;
+    // 匹配 v.douyin.com 短链接
+    var m = text.match(/https?:\/\/v\.douyin\.com\/[A-Za-z0-9]+/);
+    if(m) return m[0];
+    // 匹配 iesdouyin.com 长链接
+    m = text.match(/https?:\/\/www\.iesdouyin\.com\/share\/video\/\d+/);
+    if(m) return m[0];
+    // 匹配 aweme.snssdk.com 直接播放链接（已有video_id）
+    m = text.match(/video_id=([A-Za-z0-9]+)/);
+    if(m) return m[1]; // 直接返回 video_id
+    return null;
+  }
+
+  // ---- 从 iesdouyin SSR 页面提取 video_id ----
+  // 由于 Safari 内 fetch iesdouyin.com 会被 CORS 阻止，
+  // 我们用 fetch + mode:no-cors 虽然拿不到数据，但可以用一个替代方案：
+  // 利用 <script> JSONP 方式不可行（iesdouyin 无 JSONP 接口）
+  // 最终方案：通过页面内 iframe 或直链跳转方式获取
+  // 实际可行方案：让用户直接粘贴 video_id，或者我们预设好
+  //
+  // 但有一个巧妙方法：利用 fetch 到 aweme.snssdk.com 的 redirect
+  // 由于 snssdk.com 不发送 CORS 头，fetch 会被阻止
+  // 但 <video> 标签不受 CORS 限制！
+  // 所以如果用户提供了 video_id，直接用 douyinPlayUrl() 作为 <video src> 即可
+  //
+  // 对于短链接 v.douyin.com/xxx，需要先解析获取 video_id
+  // 短链接解析需要服务器端或浏览器端跟随重定向
+  // 浏览器端可以用 fetch redirect:follow 但跨域会被阻止
+  // 替代方案：用 <a> 标签跳转或 <img> ping 方式
+  //
+  // 最简方案：要求用户粘贴的链接中包含 video_id
+  // 或者：预设已解析好的 video_id 列表
+  function extractVideoId(text){
+    if(!text) return null;
+    // 直接匹配 video_id 参数
+    var m = text.match(/video_id=([A-Za-z0-9]+)/);
+    if(m) return m[1];
+    // 匹配 uri 格式
+    m = text.match(/"uri":"(v[0-9a-f]+)"/);
+    if(m) return m[1];
+    // 匹配纯 video_id 格式（v开头+数字字母）
+    m = text.match(/\b(v[0-9a-f]{20,})\b/);
+    if(m) return m[1];
+    return null;
+  }
+
+  // ---- 剧集列表 ----
+  function renderVideos(){
+    var list = state.videos.slice().sort(function(a,b){return a.number<b.number?-1:(a.number>b.number?1:0);});
+    var box = $('#videoList'), empty=$('#videoEmpty');
+    box.innerHTML='';
+    if(list.length===0){empty.classList.remove('hidden');return;}
+    empty.classList.add('hidden');
+    list.forEach(function(item){
+      var isDouyin = item.src==='douyin';
+      var d = document.createElement('div');
+      d.className='vitem'+(state.currentVideoId===item.id?' playing':'');
+      var badgeClass = isDouyin?'src-badge dy':'src-badge cloud';
+      var badgeText = isDouyin?'抖音':'云盘';
+      var numClass = isDouyin?'vnum dy':'vnum';
+      var actionBtn = isDouyin
+        ? '<button class="btn btn-primary btn-sm" data-play="'+item.id+'" style="padding:7px 10px">播放</button>'+
+          '<button class="btn btn-blue btn-sm" data-cast="'+item.id+'" style="padding:7px 10px;background:var(--douyin);color:#fff">投屏</button>'+
+          '<button class="btn btn-ghost btn-sm" data-app="'+item.id+'" style="padding:7px 10px">抖音</button>'
+        : '<a class="btn btn-blue btn-sm" href="'+escapeHtml(item.link)+'" target="_blank" rel="noopener" data-id="'+item.id+'" style="padding:7px 12px;text-decoration:none">打开</a>';
+      d.innerHTML = '<div class="'+numClass+'">'+escapeHtml(item.number)+'</div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div class="vname">'+escapeHtml(item.title)+'</div>'+
+          '<div style="display:flex;align-items:center;gap:6px"><span class="'+badgeClass+'">'+badgeText+'</span>'+
+          '<span class="vtag'+(isDouyin?' dy':'')+'">'+(isDouyin?'手机看 · 投屏':'跳转云盘')+'</span></div>'+
+        '</div>'+
+        actionBtn+
+        '<button class="btn btn-ghost btn-sm" data-del="'+item.id+'" style="padding:7px 10px">删</button>';
+      box.appendChild(d);
+    });
+
+    // 抖音源播放按钮（页面内 <video> 播放）
+    box.querySelectorAll('[data-play]').forEach(function(b){
+      b.addEventListener('click',function(){
+        var id=b.getAttribute('data-play');
+        var v=state.videos.find(function(x){return x.id===id;});
+        if(v) playDouyin(v);
+      });
+    });
+
+    // 抖音源投屏按钮
+    box.querySelectorAll('[data-cast]').forEach(function(b){
+      b.addEventListener('click',function(){
+        var id=b.getAttribute('data-cast');
+        var v=state.videos.find(function(x){return x.id===id;});
+        if(v) castDouyin(v);
+      });
+    });
+
+    // 抖音App按钮：唤起抖音App播放（热CDN流畅，可屏幕镜像）
+    box.querySelectorAll('[data-app]').forEach(function(b){
+      b.addEventListener('click',function(){
+        var id=b.getAttribute('data-app');
+        var v=state.videos.find(function(x){return x.id===id;});
+        if(v) openDouyinApp(v);
+      });
+    });
+
+    // 云盘源记录观看日志
+    box.querySelectorAll('a[data-id]').forEach(function(a){
+      a.addEventListener('click',function(){
+        var id=a.getAttribute('data-id');
+        var v=state.videos.find(function(x){return x.id===id;});
+        if(v) recordLog(v.title);
+      });
+    });
+
+    // 删除按钮
+    box.querySelectorAll('[data-del]').forEach(function(b){
+      b.addEventListener('click',function(){
+        var id=b.getAttribute('data-del');
+        state.videos = state.videos.filter(function(x){return x.id!==id;});
+        ls.set('wow.videos',state.videos);
+        renderVideos();
+      });
+    });
+  }
+
+  // ---- 播放抖音视频（页面内 <video>）----
+  function playDouyin(v){
+    currentPlayV = v;
+    var player = $('#player');
+    var line = v.line||0;
+    player.dataset.line = line;
+    player.dataset.tried = '';
+    player.src = douyinPlayUrl(v.videoId, line);
+    player.load();
+    state.currentVideoId = v.id;
+    renderVideos();
+    $('#playerCard').scrollIntoView({behavior:'smooth',block:'center'});
+    player.play().then(function(){
+      btnPlay.textContent='⏸';
+    }).catch(function(){
+      $('#airplayHint').textContent = '点▶按钮开始播放';
+    });
+    recordLog(v.title);
+  }
+
+  // ---- 投屏抖音视频（Safari原生播放器）----
+  // Safari 打开 MP4 直链会自动用 iOS 系统原生播放器全屏播放
+  // 系统原生播放器使用 AVPlayer，和抖音App同一引擎
+  // 屏幕镜像可以正常捕获 AVPlayer 画面
+  // 投屏必须用标记好的 line（window.open 同步调用，无法运行时探测线路）
+  function castDouyin(v){
+    var url = douyinPlayUrl(v.videoId, v.line||0);
+    state.currentVideoId = v.id;
+    renderVideos();
+    recordLog(v.title);
+    window.open(url, '_blank');
+  }
+
+  // ---- 抖音App打开：唤起抖音App播放该集 ----
+  // 抖音App走自家热CDN，拉流快；App画面可被屏幕镜像（已验证）
+  // 用抖音URL Scheme强制唤起App（最可靠），未安装则回退网页版
+  function openDouyinApp(v){
+    if(!v.awemeId){ alert('该集缺少抖音视频ID，无法唤起抖音'); return; }
+    state.currentVideoId = v.id;
+    renderVideos();
+    recordLog(v.title);
+    var scheme = 'snssdk1128://aweme/detail/'+v.awemeId;
+    var web = 'https://www.douyin.com/video/'+v.awemeId;
+    // 优先 Scheme 直接唤起App；1.8s内页面仍在说明未唤起，回退网页版
+    var left = Date.now();
+    window.location.href = scheme;
+    setTimeout(function(){
+      if(!document.hidden && (Date.now()-left) < 2200){
+        window.location.href = web;
+      }
+    }, 1800);
+  }
+
+  // ---- 复制文件夹链接 ----
+  $('#copyFolderBtn').addEventListener('click',function(){
+    var txt = 'https://www.alipan.com/s/PF3MHZBSsyt';
+    copyText(txt,'已复制文件夹链接');
+  });
+  function copyText(txt,msg){
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(function(){alert(msg);});
+    }else{
+      var ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();
+      try{document.execCommand('copy');alert(msg);}catch(e){alert('复制失败，请手动复制');}
+      document.body.removeChild(ta);
+    }
+  }
+
+  // ---- 添加剧集弹层 ----
+  var addModal = $('#addModal');
+  var currentSrc = 'douyin';
+
+  $('#srcSeg').querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      $('#srcSeg').querySelectorAll('button').forEach(function(b){b.classList.remove('active');});
+      btn.classList.add('active');
+      currentSrc = btn.getAttribute('data-src');
+      if(currentSrc==='douyin'){
+        $('#douyinInput').classList.remove('hidden');
+        $('#cloudInput').classList.add('hidden');
+      }else{
+        $('#douyinInput').classList.add('hidden');
+        $('#cloudInput').classList.remove('hidden');
+      }
+    });
+  });
+
+  $('#addBtn').addEventListener('click',function(){
+    $('#addNumber').value='';$('#addTitle').value='';$('#addDouyinLink').value='';$('#addLink').value='';
+    // 重置为抖音源
+    currentSrc = 'douyin';
+    $('#srcSeg').querySelectorAll('button').forEach(function(b){b.classList.remove('active');});
+    $('#srcSeg').querySelectorAll('button')[0].classList.add('active');
+    $('#douyinInput').classList.remove('hidden');
+    $('#cloudInput').classList.add('hidden');
+    addModal.classList.remove('hidden');
+  });
+  $('#cancelAdd').addEventListener('click',function(){addModal.classList.add('hidden');});
+
+  $('#confirmAdd').addEventListener('click',function(){
+    var n = $('#addNumber').value.trim();
+    if(!n){alert('请填写视频编号');return;}
+
+    if(currentSrc==='douyin'){
+      var raw = $('#addDouyinLink').value.trim();
+      if(!raw){alert('请填写抖音分享链接');return;}
+
+      // 尝试直接提取 video_id
+      var vid = extractVideoId(raw);
+
+      // 尝试提取短链接
+      var douyinUrl = extractDouyinUrl(raw);
+
+      if(!vid && !douyinUrl){
+        alert('未能从输入中识别抖音链接或视频ID。\n\n请确认粘贴了完整的抖音分享文字，或直接粘贴 video_id。');
+        return;
+      }
+
+      // 如果已有 video_id，直接添加
+      if(vid){
+        var t = $('#addTitle').value.trim() || ('Wow English '+n);
+        state.videos.push({id:Date.now().toString(),number:n,title:t,src:'douyin',videoId:vid});
+        ls.set('wow.videos',state.videos);
+        renderVideos();
+        addModal.classList.add('hidden');
+        return;
+      }
+
+      // 如果只有短链接，需要解析获取 video_id
+      // 浏览器端因 CORS 无法直接 fetch iesdouyin.com
+      // 但我们可以用一个巧妙方法：通过 <video> 标签先加载短链接
+      // 短链接会 302 到 iesdouyin SSR 页面（非视频），所以不行
+      //
+      // 最终方案：使用跨域代理解析
+      // 但为了保持纯前端无依赖，我们用一个公开 CORS 代理
+      // 如果代理失败，提示用户手动获取 video_id
+      //
+      // 更可靠方案：直接存储短链接，播放时通过页面跳转方式获取
+      // 但这不够好。最佳方案是使用 CORS 代理解析短链接
+
+      parseDouyinShortUrl(douyinUrl, function(videoId){
+        if(!videoId){
+          alert('解析抖音链接失败。CDN代理可能不可用。\n\n替代方案：\n1. 在抖音App内打开该视频\n2. 点分享→复制链接\n3. 粘贴完整分享文字（含「复制打开抖音」）');
+          $('#parseLoading').classList.add('hidden');
+          return;
+        }
+        var t = $('#addTitle').value.trim() || ('Wow English '+n);
+        state.videos.push({id:Date.now().toString(),number:n,title:t,src:'douyin',videoId:videoId});
+        ls.set('wow.videos',state.videos);
+        renderVideos();
+        addModal.classList.add('hidden');
+        $('#parseLoading').classList.add('hidden');
+      });
+    }else{
+      // 云盘源
+      var l = $('#addLink').value.trim();
+      if(!l||l.indexOf('alipan.com')===-1){alert('请填写有效的阿里云盘单集分享链接');return;}
+      var t = $('#addTitle').value.trim() || ('Wow English '+n);
+      state.videos.push({id:Date.now().toString(),number:n,title:t,src:'cloud',link:l});
+      ls.set('wow.videos',state.videos);
+      renderVideos();
+      addModal.classList.add('hidden');
+    }
+  });
+
+  // ---- 解析抖音短链接获取 video_id ----
+  // 使用公开 CORS 代理获取 iesdouyin SSR 页面，从中提取 video_id
+  function parseDouyinShortUrl(shortUrl, callback){
+    $('#parseLoading').classList.remove('hidden');
+
+    // iesdouyin SSR 页面 URL
+    // 短链接 v.douyin.com/xxx 会 302 到 iesdouyin.com/share/video/{id}/
+    // 但我们无法直接获取重定向目标（CORS）
+    // 使用 CORS 代理：api.allorigins.win 或 corsproxy.io
+    var proxies = [
+      'https://api.allorigins.win/raw?url=',
+      'https://corsproxy.io/?',
+      'https://api.codetabs.com/v1/proxy/?quest='
+    ];
+
+    // 先尝试用代理获取短链接的重定向目标
+    // allorigins 会自动跟随重定向并返回最终页面内容
+    var proxyUrl = proxies[0] + encodeURIComponent(shortUrl);
+
+    fetch(proxyUrl, {method:'GET'})
+      .then(function(resp){return resp.text();})
+      .then(function(html){
+        var vid = extractVideoId(html);
+        if(!vid){
+          // 尝试从 html 中找 play_addr
+          var m = html.match(/play_addr.*?"uri":"([^"]+)"/);
+          if(m) vid = m[1];
+        }
+        callback(vid);
+      })
+      .catch(function(err){
+        // 尝试第二个代理
+        var proxyUrl2 = proxies[1] + encodeURIComponent(shortUrl);
+        fetch(proxyUrl2, {method:'GET'})
+          .then(function(resp){return resp.text();})
+          .then(function(html){
+            var vid = extractVideoId(html);
+            if(!vid){
+              var m = html.match(/play_addr.*?"uri":"([^"]+)"/);
+              if(m) vid = m[1];
+            }
+            callback(vid);
+          })
+          .catch(function(){
+            // 尝试第三个代理
+            var proxyUrl3 = proxies[2] + encodeURIComponent(shortUrl);
+            fetch(proxyUrl3, {method:'GET'})
+              .then(function(resp){return resp.text();})
+              .then(function(html){
+                var vid = extractVideoId(html);
+                if(!vid){
+                  var m = html.match(/play_addr.*?"uri":"([^"]+)"/);
+                  if(m) vid = m[1];
+                }
+                callback(vid);
+              })
+              .catch(function(){
+                callback(null);
+              });
+          });
+      });
+  }
+
+  // ---- 播放器控制 ----
+  var player = $('#player');
+  var playerCard = $('#playerCard');
+  var btnPlay = $('#btnPlay');
+  var btnStop = $('#btnStop');
+  var btnListen = $('#btnListen');
+  var btnAirplay = $('#btnAirplay');
+  var playerWrap = $('#playerWrap');
+
+  // ---- AirPlay 按钮 ----
+  // iOS Safari 不允许 JS 直接调用 AirPlay 路由选择器
+  // 但我们可以通过显示提示引导用户使用系统 AirPlay
+  btnAirplay.addEventListener('click',function(){
+    if(!player.src || !player.currentSrc){
+      alert('请先点「播放」按钮播放视频，再投屏');
+      return;
+    }
+    // 尝试调用 webkit 的 AirPlay 选择器（如果可用）
+    if(player.webkitShowAirPlayPicker && typeof player.webkitShowAirPlayPicker === 'function'){
+      try{
+        player.webkitShowAirPlayPicker();
+        return;
+      }catch(e){}
+    }
+    // 后退方案：提示用户通过控制中心操作
+    alert('请按以下步骤投屏：\n\n1. 视频正在播放中\n2. 下拉iPhone控制中心\n3. 点右上角「播放中」卡片\n4. 点AirPlay图标 📡\n5. 选你的电视/乐播\n\n⚠ 不要用「屏幕镜像」，要用「AirPlay媒体投射」！');
+  });
+
+  btnPlay.addEventListener('click',function(){
+    if(player.paused){
+      player.play().then(function(){btnPlay.textContent='⏸';}).catch(function(){});
+    }else{
+      player.pause();btnPlay.textContent='▶';
+    }
+  });
+  player.addEventListener('play',function(){btnPlay.textContent='⏸';});
+  player.addEventListener('pause',function(){btnPlay.textContent='▶';});
+  player.addEventListener('ended',function(){
+    if(state.listenMode){player.currentTime=0;player.play();}
+    else{btnPlay.textContent='▶';}
+  });
+  player.addEventListener('error',function(){
+    btnPlay.textContent='▶';
+    // 线路自动回退：line=0 失败则试 line=1，反之亦然
+    if(!currentPlayV){ $('#airplayHint').textContent='视频加载失败，重新点「播放」试试'; return; }
+    var cur = parseInt(player.dataset.line||'0',10);
+    var tried = player.dataset.tried||'';
+    if(tried.indexOf(String(cur))>=0){
+      // 两条线路都已尝试仍失败，确属链接失效
+      $('#airplayHint').textContent = '视频加载失败，链接可能已失效，请重新获取该集';
+      return;
+    }
+    player.dataset.tried = tried + cur;
+    var alt = cur===0?1:0;
+    player.dataset.line = alt;
+    $('#airplayHint').textContent = '正在切换线路重试…';
+    player.src = douyinPlayUrl(currentPlayV.videoId, alt);
+    player.load();
+    player.play().then(function(){btnPlay.textContent='⏸';}).catch(function(){});
+  });
+  player.addEventListener('loadedmetadata',function(){
+    $('#airplayHint').textContent = '✅ 视频已加载，点 📡 按钮投屏到电视';
+  });
+  player.addEventListener('webkitplaybacktargetavailabilitychanged',function(e){
+    if(e.availability === 'available'){
+      btnAirplay.style.background = 'var(--ok)';
+      btnAirplay.title = 'AirPlay可用，点击投屏';
+    }else{
+      btnAirplay.style.background = 'var(--accent2)';
+    }
+  });
+  btnStop.addEventListener('click',function(){
+    player.pause();player.currentTime=0;player.removeAttribute('src');player.load();
+    btnPlay.textContent='▶';
+    state.currentVideoId = null;
+    renderVideos();
+  });
+  btnListen.addEventListener('click',function(){
+    state.listenMode = !state.listenMode;
+    ls.set('wow.listenMode',state.listenMode);
+    $('#listenToggle').checked = state.listenMode;
+    if(state.listenMode) enterListenMode(); else exitListenMode();
+  });
+
+  function enterListenMode(){
+    if(!player.src) {
+      alert('请先选择一集视频播放');
+      state.listenMode = false;
+      ls.set('wow.listenMode',false);
+      $('#listenToggle').checked = false;
+      return;
+    }
+    var v = document.createElement('div');
+    v.className = 'listen-bg';
+    v.id = 'listenView';
+    v.innerHTML = '<div class="big">👂</div><div style="font-size:16px;font-weight:600;color:#fff">熏听模式</div>'+
+      '<div style="font-size:11px;color:rgba(255,255,255,.5)">画面已关闭 · 音频循环播放中</div>';
+    player.style.display='none';
+    playerWrap.appendChild(v);
+    player.loop = true;
+    if(player.paused) player.play().then(function(){btnPlay.textContent='⏸';}).catch(function(){});
+    btnListen.style.background = 'var(--accent)';
+    btnListen.style.color = '#1a1a1a';
+  }
+  function exitListenMode(){
+    var v = $('#listenView'); if(v) v.remove();
+    player.style.display='block';
+    player.loop = false;
+    btnListen.style.background = '';
+    btnListen.style.color = '';
+  }
+
+  // ---- 设置 ----
+  var settingsModal = $('#settingsModal');
+  $('#fabBtn').addEventListener('click',function(){
+    $('#logToggle').checked = state.logsEnabled;
+    renderLogs();
+    settingsModal.classList.remove('hidden');
+  });
+  $('#closeSettings').addEventListener('click',function(){settingsModal.classList.add('hidden');});
+
+  $('#logToggle').addEventListener('change',function(e){
+    state.logsEnabled = e.target.checked;
+    ls.set('wow.logsEnabled',state.logsEnabled);
+    renderLogs();
+  });
+  $('#listenToggle').addEventListener('change',function(e){
+    state.listenMode = e.target.checked;
+    ls.set('wow.listenMode',state.listenMode);
+    if(player.src){
+      if(state.listenMode) enterListenMode(); else exitListenMode();
+    }
+  });
+
+  // ---- 日志 ----
+  function recordLog(name){
+    if(!state.logsEnabled) return;
+    state.logs.unshift({id:Date.now(),date:formatDate(new Date()),title:name});
+    if(state.logs.length>200) state.logs.length=200;
+    ls.set('wow.logs',state.logs);
+  }
+  function renderLogs(){
+    var sec = $('#logSection');
+    sec.classList.toggle('hidden',!state.logsEnabled);
+    if(!state.logsEnabled) return;
+    var box = $('#logList'), empty=$('#logEmpty');
+    box.innerHTML='';
+    if(state.logs.length===0){empty.classList.remove('hidden');return;}
+    empty.classList.add('hidden');
+    state.logs.forEach(function(l){
+      var d=document.createElement('div');
+      d.className='log-item';
+      d.innerHTML='<span class="log-date">'+escapeHtml(l.date)+'</span><span class="log-name">'+escapeHtml(l.title)+'</span>';
+      box.appendChild(d);
+    });
+  }
+  $('#clearLogBtn').addEventListener('click',function(){
+    if(confirm('确认清空所有观看日志？')){
+      state.logs=[]; ls.set('wow.logs',state.logs); renderLogs();
+    }
+  });
+
+  // ---- 工具 ----
+  function formatDate(d){
+    var p=function(n){return n<10?'0'+n:''+n;};
+    return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());
+  }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});
+  }
+
+  // ---- 预设剧集：第一季全部33集（抖音合集解析）----
+  // 第25-33集：从合集 https://v.douyin.com/VebxuGIKB7w/ (mix_id=7669019617909540899) 实测解析
+  // line 字段为实测可用的CDN线路（0或1），第29/33集需 line=1
+  // 第25-33集：从合集 https://v.douyin.com/VebxuGIKB7w/ (mix_id=7669019617909540899) 实测解析
+  // awemeId 用于「抖音」按钮唤起抖音App播放（热CDN流畅）
+  // videoId+line 用于「投屏」按钮 playwm 直链（540p 全部实测可用）
+  var PRESET_VIDEOS = [
+    {id:'preset-025',number:'025',title:'Wow English 第一季 第25集',src:'douyin',videoId:'v0300fg10000d9k7utnog65s79brsv7g',awemeId:'7667518725550351027',line:0},
+    {id:'preset-026',number:'026',title:'Wow English 第一季 第26集',src:'douyin',videoId:'v0300fg10000d9kudfnog65rlkr8br8g',awemeId:'7667913900272311241',line:0},
+    {id:'preset-027',number:'027',title:'Wow English 第一季 第27集',src:'douyin',videoId:'v0300fg10000d9kvc4vog65hotcem630',awemeId:'7667930672997376242',line:0},
+    {id:'preset-028',number:'028',title:'Wow English 第一季 第28集',src:'douyin',videoId:'v0300fg10000d9lhbefog65ofmnek4k0',awemeId:'7668247045325193970',line:0},
+    {id:'preset-029',number:'029',title:'Wow English 第一季 第29集',src:'douyin',videoId:'v0300fg10000da60lvfog65n66njripg',awemeId:'7677523915455940462',line:1},
+    {id:'preset-030',number:'030',title:'Wow English 第一季 第30集',src:'douyin',videoId:'v0300fg10000d9m9h5vog65vlupu1g00',awemeId:'7668672296483074483',line:0},
+    {id:'preset-031',number:'031',title:'Wow English 第一季 第31集',src:'douyin',videoId:'v0300fg10000d9ma2hvog65mgb2r5o60',awemeId:'7668681823535119790',line:0},
+    {id:'preset-032',number:'032',title:'Wow English 第一季 第32集',src:'douyin',videoId:'v0300fg10000d9mt49vog65qfmrlnqg0',awemeId:'7669017093072811465',line:0},
+    {id:'preset-033',number:'033',title:'Wow English 第一季 第33集',src:'douyin',videoId:'v0300fg10000d9mubpfog65njagdv0dg',awemeId:'7669038732012484078',line:1}
+  ];
+  function initPresetVideos(){
+    // 预设版本号：版本变化时用新预设替换旧预设（保留用户自定义的云盘等非预设视频）
+    var PRESET_VER = 2;
+    var savedVer = ls.get('wow.presetVer', 0);
+    if(savedVer !== PRESET_VER){
+      // 清掉旧的 preset-* 预设，换上新预设（旧33集 → 新25-33集）
+      var custom = state.videos.filter(function(v){return !v.id || v.id.indexOf('preset-')!==0;});
+      state.videos = PRESET_VIDEOS.concat(custom);
+      ls.set('wow.videos', state.videos);
+      ls.set('wow.presetVer', PRESET_VER);
+    }
+  }
+
+  // ---- CDN 预热：首次任意点击后，触发各集播放链接 ----
+  // 目的：让抖音CDN边缘节点提前回源缓存，之后点「投屏」拉流更快
+  var preheated = false;
+  document.addEventListener('click', function(){
+    if(preheated) return;
+    preheated = true;
+    state.videos.forEach(function(v){
+      if(v.src==='douyin' && v.videoId){
+        var img = new Image();
+        img.src = douyinPlayUrl(v.videoId, v.line);
+      }
+    });
+  }, true);
+
+  // ---- 初始化 ----
+  initPresetVideos();
+  renderVideos();
+})();
+</script>
+</body>
+</html>
