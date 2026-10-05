@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<title>连播小样验证 · Wow English TV</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;padding:18px;background:#0f1115;color:#e8e8ea;
+       font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;font-size:14px;line-height:1.6}
+  h1{font-size:17px;margin:0 0 4px}
+  .muted{color:#8b8f98;font-size:12px}
+  .card{background:#171a21;border-radius:12px;padding:14px;margin:12px 0}
+  button{background:#2a3038;color:#fff;border:0;border-radius:10px;padding:12px 16px;font-size:15px;margin:4px 4px 0 0}
+  button.go{background:#3b82f6;font-weight:600}
+  button.warn{background:#ef4444}
+  #log{background:#0b0d11;border:1px solid #23272f;border-radius:10px;padding:10px;font-size:12px;
+       white-space:pre-wrap;max-height:300px;overflow:auto;color:#9ee6a0;margin-top:8px}
+  .bad{color:#ff8f8f}.warn2{color:#ffd166}
+  ol{margin:6px 0 0 18px;padding:0}
+  label{font-size:13px}
+</style>
+</head>
+<body>
+<h1>连播小样验证（测 Safari 行为，非正式功能）</h1>
+<p class="muted">要验证的问题：<b>页面能不能在没人再点的情况下，让已打开的原生播放器自动切到下一集。</b>这决定"选一组自动播完"能不能成立。</p>
+
+<div class="card">
+  <div>
+    <label><input type="checkbox" id="testMode" checked> 测试模式（间隔 20 秒，快速看效果）</label>
+    <div class="muted" style="margin-top:2px">取消勾选 → 用每集<b>真实时长</b>切换（25集72秒、26集213秒…）</div>
+  </div>
+  <div style="margin-top:10px">
+    <button class="go" id="start">▶ 开始连播测试</button>
+    <button id="manual">下一集（手动点）</button>
+    <button class="warn" id="stop">停止</button>
+  </div>
+</div>
+
+<div class="card">
+  <div style="font-weight:600;margin-bottom:6px">日志</div>
+  <div id="log">（等待操作…）</div>
+</div>
+
+<div class="card">
+  <div style="font-weight:600;margin-bottom:6px">测完请告诉我这 4 点</div>
+  <ol class="muted">
+    <li>有没有<b>自动</b>切到下一集？（日志里有没有「✓ 脚本切换成功」）</li>
+    <li>「下一集（手动点）」能不能切？</li>
+    <li>有没有弹出 Safari 的"阻止弹窗"提示？</li>
+    <li>日志里有没有红色 ✗ 报错？</li>
+  </ol>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  // 时长来自抖音合集接口（毫秒转秒）——自动连播必须按集用真实时长，不能拍脑袋
+  var EPS = [
+    {n:'025', videoId:'v0300fg10000d9k7utnog65s79brsv7g', line:0, sec:72},
+    {n:'026', videoId:'v0300fg10000d9kudfnog65rlkr8br8g', line:0, sec:213},
+    {n:'027', videoId:'v0300fg10000d9kvc4vog65hotcem630', line:0, sec:88},
+    {n:'028', videoId:'v0300fg10000d9lhbefog65ofmnek4k0', line:0, sec:287},
+    {n:'029', videoId:'v0300fg10000da60lvfog65n66njripg', line:1, sec:91},
+    {n:'030', videoId:'v0300fg10000d9m9h5vog65vlupu1g00', line:0, sec:314},
+    {n:'031', videoId:'v0300fg10000d9ma2hvog65mgb2r5o60', line:0, sec:86},
+    {n:'032', videoId:'v0300fg10000d9mt49vog65qfmrlnqg0', line:0, sec:273},
+    {n:'033', videoId:'v0300fg10000d9mubpfog65njagdv0dg', line:1, sec:90}
+  ];
+  var W_NAME = 'wowPlayer';
+  var w = null, i = 0, timer = null;
+  var elLog = document.getElementById('log');
+  var elTest = document.getElementById('testMode');
+
+  function log(msg, cls){
+    var t = new Date().toTimeString().slice(0,8);
+    var s = document.createElement('div');
+    if(cls) s.className = cls;
+    s.textContent = '[' + t + '] ' + msg;
+    elLog.appendChild(s);
+    elLog.scrollTop = elLog.scrollHeight;
+  }
+  function url(ep){
+    return 'https://aweme.snssdk.com/aweme/v1/playwm/?video_id=' + ep.videoId + '&ratio=540p&line=' + ep.line;
+  }
+  function waitSec(ep){ return elTest.checked ? 20 : (ep.sec || 180); }
+  function openEp(idx){
+    var ep = EPS[idx], u = url(ep);
+    log('尝试打开 第' + ep.n + '集…');
+    w = window.open(u, W_NAME);
+    if(!w){ log('✗ window.open 返回 null —— 被 Safari 弹窗拦截', 'bad'); return false; }
+    log('已打开 第' + ep.n + '集');
+    return true;
+  }
+  // 关键验证点：不经用户点击，用脚本改变已打开窗口的地址
+  function autoAdvance(){
+    var ep = EPS[i], u = url(ep);
+    if(!w || w.closed){
+      log('⚠ 播放窗口丢失，改为重新打开（无手势多半被拦）', 'warn2');
+      if(!openEp(i)) log('结论：自动连播走不通，只能手动点「下一集」', 'bad');
+      return;
+    }
+    try{
+      w.location.replace(u);
+      log('✓ 脚本切换成功 → 第' + ep.n + '集（自动连播可行！）');
+    }catch(e){
+      log('✗ 脚本切换被拒绝：' + (e && e.name) + ' — Safari 不允许脚本改该窗口', 'bad');
+      log('  → 尝试 window.open 兜底（无手势通常被拦）', 'warn2');
+      if(!openEp(i)) log('结论：自动连播走不通，只能手动点「下一集」', 'bad');
+    }
+  }
+  function scheduleNext(){
+    clearTimeout(timer);
+    var sec = waitSec(EPS[i]);
+    log('⏱ 等 ' + sec + ' 秒后切下一集' + (elTest.checked ? '（测试模式）' : '（真实时长）'));
+    timer = setTimeout(function(){
+      i++;
+      if(i >= EPS.length){ log('测试结束：已走完 9 集。看上面有没有「✓ 脚本切换成功」'); return; }
+      autoAdvance();
+      scheduleNext();
+    }, sec*1000);
+  }
+
+  document.getElementById('start').addEventListener('click', function(){
+    clearTimeout(timer); i = 0; elLog.innerHTML = '';
+    log('▶ 开始（手势内打开第一集）');
+    if(openEp(i)) scheduleNext();
+  });
+  document.getElementById('manual').addEventListener('click', function(){
+    i = (i + 1) % EPS.length;
+    log('手动点「下一集」→ 目标 第' + EPS[i].n + '集（手势内，一般不会被拦）');
+    if(w && !w.closed){
+      try{ w.location.replace(url(EPS[i])); log('✓ 手动切换成功'); return; }
+      catch(e){ log('✗ 手动切换也报错：' + (e && e.name), 'bad'); }
+    }
+    openEp(i);
+  });
+  document.getElementById('stop').addEventListener('click', function(){ clearTimeout(timer); log('已停止计时'); });
+  elTest.addEventListener('change', function(){ log('切换为：' + (elTest.checked ? '测试模式(20秒)' : '真实时长模式')); });
+})();
+</script>
+</body>
+</html>
