@@ -32,6 +32,15 @@
     <div class="muted" style="margin-top:2px">取消勾选 → 用每集<b>真实时长</b>切换（25集72秒、26集213秒…）</div>
   </div>
   <div style="margin-top:10px">
+    <label>线路：
+      <select id="lineSel" style="background:#0f1115;color:#fff;border:1px solid #2a3038;border-radius:8px;padding:8px">
+        <option value="auto">自动（按集）</option>
+        <option value="0">线路 0</option>
+        <option value="1">线路 1</option>
+      </select>
+    </label>
+  </div>
+  <div style="margin-top:8px">
     <button class="go" id="start">▶ 开始连播测试</button>
     <button id="manual">下一集（手动点）</button>
     <button class="warn" id="stop">停止</button>
@@ -50,6 +59,7 @@
     <li>「下一集（手动点）」能不能切？</li>
     <li>有没有弹出 Safari 的"阻止弹窗"提示？</li>
     <li>日志里有没有红色 ✗ 报错？</li>
+    <li style="color:#ffd166">若打开后显示 403：那是抖音签名直链临时抽风，<b>回来再点一次「开始」</b>（会拿新签名），或把「线路」换 0/1 再试</li>
   </ol>
 </div>
 
@@ -82,7 +92,9 @@
     elLog.scrollTop = elLog.scrollHeight;
   }
   function url(ep){
-    return 'https://aweme.snssdk.com/aweme/v1/playwm/?video_id=' + ep.videoId + '&ratio=540p&line=' + ep.line;
+    var sel = document.getElementById('lineSel').value;
+    var line = (sel === 'auto') ? ep.line : parseInt(sel,10);
+    return 'https://aweme.snssdk.com/aweme/v1/playwm/?video_id=' + ep.videoId + '&ratio=540p&line=' + line;
   }
   function waitSec(ep){ return elTest.checked ? 20 : (ep.sec || 180); }
   function openEp(idx){
