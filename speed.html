@@ -41,7 +41,7 @@
   <div style="margin-top:10px">
     <button class="go" id="runBtn">▶ 开始测速（约 1 分钟）</button>
   </div>
-  <p class="muted" style="margin:8px 0 0">测试时会静音播放，不会出声；测完请告诉我表格里的数字。</p>
+  <p class="muted" style="margin:8px 0 0">测试时会静音播放，不会出声。若"C 中转后播"显示"未接管"，刷新本页再点一次开始即可。</p>
 </div>
 
 <div class="card">
@@ -169,40 +169,47 @@
   }
   function set(id, txt, cls){ document.getElementById(id).textContent = txt; if(cls) document.getElementById(id).className = 'big ' + cls; }
 
-  document.getElementById('runBtn').addEventListener('click', function(){
+  document.getElementById('runBtn').addEventListener('click', async function(){
     var n = el.sel.value;
     var btn = document.getElementById('runBtn');
     btn.disabled = true; btn.textContent = '测试中…';
     el.log.innerHTML = '';
     log('开始测速：第' + n + '集（' + EPS[n].mb + 'MB / ' + EPS[n].sec + '秒）');
 
-    measureVideo(n, direct(n), 'A').then(function(r){
+    try{
+      // A
+      var r = await measureVideo(n, direct(n), 'A');
       set('aSpd', fmt(r), r.mbps >= 1.5 ? 'ok' : 'bad');
       el.aSt.textContent = r.err ? ('失败：' + r.err)
         : (r.started ? '能播 · 缓冲' + Math.round(r.bufSec) + '秒' : '未起播 · 缓冲' + Math.round(r.bufSec) + '秒');
-      log('A 结果：' + (r.err ? r.err : (r.mbps.toFixed(2) + ' MB/s')));
-      return ensureSW();
-    }).then(function(swOk){
-      if(!swOk){ el.cSt.textContent = '本浏览器不支持中转'; log('C 跳过：不支持', 'mid'); return null; }
-      log('C：中转已就绪，开始测');
-      return measureVideo(n, './__p/' + n + '.mp4', 'C');
-    }).then(function(r){
-      if(!r) return;
-      set('cSpd', fmt(r), r.mbps >= 1.5 ? 'ok' : 'bad');
-      el.cSt.textContent = r.err ? ('失败：' + r.err) : (r.started ? '能播 · 缓冲' + Math.round(r.bufSec) + '秒' : '未起播 · 缓冲' + Math.round(r.bufSec) + '秒');
-      log('C 结果：' + (r.err ? r.err : (r.mbps.toFixed(2) + ' MB/s')));
-      return measureFetch(n);
-    }).then(function(r){
-      if(!r) return;
-      set('bSpd', fmt(r), r.mbps >= 1.5 ? 'ok' : 'bad');
-      el.bSt.textContent = r.err ? ('中断/失败') : ('抓到 ' + (r.total/1048576).toFixed(1) + 'MB，用时 ' + (r.ms/1000).toFixed(1) + '秒' + (r.partial ? '（提前中止按速度估算）' : ''));
-      log('B 结果：' + (r.err ? r.err : (r.mbps.toFixed(2) + ' MB/s')));
+      log('A 结果：' + (r.err ? r.err : r.mbps.toFixed(2) + ' MB/s'));
+
+      // C（Safari 要求刷新一次页面，中转才接管；若显示不支持，刷新后再点一次）
+      var swOk = await ensureSW();
+      if(!swOk){
+        set('cSpd', '—', 'mid'); el.cSt.textContent = '未接管（刷新本页后重测即生效）';
+        log('C 跳过：刷新本页后再点一次开始即可测到', 'mid');
+      }else{
+        var rc = await measureVideo(n, './__p/' + n + '.mp4', 'C');
+        set('cSpd', fmt(rc), rc.mbps >= 1.5 ? 'ok' : 'bad');
+        el.cSt.textContent = rc.err ? ('失败：' + rc.err)
+          : (rc.started ? '能播 · 缓冲' + Math.round(rc.bufSec) + '秒' : '未起播 · 缓冲' + Math.round(rc.bufSec) + '秒');
+        log('C 结果：' + (rc.err ? rc.err : rc.mbps.toFixed(2) + ' MB/s'));
+      }
+
+      // B（无论 C 是否跳过都要测）
+      var rb = await measureFetch(n);
+      set('bSpd', fmt(rb), rb.mbps >= 1.5 ? 'ok' : 'bad');
+      el.bSt.textContent = rb.err ? '中断/失败：' + rb.err
+        : ('抓到 ' + (rb.total/1048576).toFixed(1) + 'MB，用时 ' + (rb.ms/1000).toFixed(1) + '秒' + (rb.partial ? '（25秒未下完，按当前速度估算）' : ''));
+      log('B 结果：' + (rb.err ? rb.err : rb.mbps.toFixed(2) + ' MB/s'));
+
       btn.disabled = false; btn.textContent = '▶ 再测一次';
       log('全部测完。请把表格里的三个数字告诉我。');
-    }).catch(function(e){
+    }catch(e){
       log('测试异常：' + e, 'bad');
       btn.disabled = false; btn.textContent = '▶ 开始测速';
-    });
+    }
   });
 })();
 </script>
