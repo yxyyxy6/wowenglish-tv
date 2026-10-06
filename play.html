@@ -87,10 +87,13 @@
   function waitSec(ep){ return elTest.checked ? 20 : (ep.sec || 180); }
   function openEp(idx){
     var ep = EPS[idx], u = url(ep);
-    log('尝试打开 第' + ep.n + '集…');
-    w = window.open(u, W_NAME);
-    if(!w){ log('✗ window.open 返回 null —— 被 Safari 弹窗拦截', 'bad'); return false; }
-    log('已打开 第' + ep.n + '集');
+    log('尝试打开 第' + ep.n + '集…（与工作台「投屏」相同的 _blank 写法）');
+    w = window.open(u, '_blank');
+    if(!w){
+      log('✗ window.open 返回 null —— 仍被拦截。请检查：设置→Safari→「阻止弹出窗口」是否关闭；或地址栏左侧有无弹窗图标', 'bad');
+      return false;
+    }
+    log('已打开 第' + ep.n + '集（保留引用，稍后脚本切换）');
     return true;
   }
   // 关键验证点：不经用户点击，用脚本改变已打开窗口的地址
