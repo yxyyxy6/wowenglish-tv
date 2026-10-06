@@ -5,7 +5,7 @@
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0f1115">
-<title>连播小样验证 · Wow English TV</title>
+<title>连播 · Wow English TV</title>
 <style>
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   body{margin:0;padding:18px;background:#0f1115;color:#e8e8ea;
@@ -16,144 +16,217 @@
   button{background:#2a3038;color:#fff;border:0;border-radius:10px;padding:12px 16px;font-size:15px;margin:4px 4px 0 0}
   button.go{background:#3b82f6;font-weight:600}
   button.warn{background:#ef4444}
+  select{background:#0f1115;color:#fff;border:1px solid #2a3038;border-radius:8px;padding:9px;font-size:15px;width:100%}
+  .seg{display:flex;gap:6px;margin-top:8px}
+  .seg button{flex:1;margin:0;font-size:13px;padding:10px 6px;background:#2a3038}
+  .seg button.on{background:#3b82f6;font-weight:600}
+  .now{font-size:24px;font-weight:700;margin:6px 0 2px}
+  .cd{font-size:13px;color:#ffd166}
+  .eps{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .ep{padding:5px 10px;border-radius:999px;background:#2a3038;font-size:12px;color:#9aa0aa}
+  .ep.on{background:#3b82f6;color:#fff;font-weight:600}
+  .ep.done{background:#1c3f2b;color:#7ee2a8}
   #log{background:#0b0d11;border:1px solid #23272f;border-radius:10px;padding:10px;font-size:12px;
-       white-space:pre-wrap;max-height:300px;overflow:auto;color:#9ee6a0;margin-top:8px}
+       white-space:pre-wrap;max-height:220px;overflow:auto;color:#9ee6a0;margin-top:8px}
   .bad{color:#ff8f8f}.warn2{color:#ffd166}
-  ol{margin:6px 0 0 18px;padding:0}
-  label{font-size:13px}
+  a{color:#6ea8fe}
 </style>
 </head>
 <body>
-<h1>连播小样验证（测 Safari 行为，非正式功能）</h1>
-<p class="muted">要验证的问题：<b>页面能不能在没人再点的情况下，让已打开的原生播放器自动切到下一集。</b>这决定"选一组自动播完"能不能成立。</p>
+<h1>🎯 分组连播</h1>
+<p class="muted">选一组 → 点开始 → 按每集真实时长<b>自动接下一集</b>，全程不用管。</p>
 
 <div class="card">
-  <div>
-    <label><input type="checkbox" id="testMode" checked> 测试模式（间隔 20 秒，快速看效果）</label>
-    <div class="muted" style="margin-top:2px">取消勾选 → 用每集<b>真实时长</b>切换（25集72秒、26集213秒…）</div>
-  </div>
-  <div style="margin-top:10px">
-    <label>线路：
-      <select id="lineSel" style="background:#0f1115;color:#fff;border:1px solid #2a3038;border-radius:8px;padding:8px">
-        <option value="auto">自动（按集）</option>
-        <option value="0">线路 0</option>
-        <option value="1">线路 1</option>
-      </select>
-    </label>
-  </div>
-  <div style="margin-top:8px">
-    <button class="go" id="start">▶ 开始连播测试</button>
-    <button id="manual">下一集（手动点）</button>
-    <button class="warn" id="stop">停止</button>
+  <div class="muted" style="margin-bottom:6px">选择分组</div>
+  <select id="groupSel"></select>
+  <div class="muted" style="margin:10px 0 4px">这一组播完之后</div>
+  <div class="seg" id="modeSeg">
+    <button data-m="stop">播完就停</button>
+    <button data-m="loop">整组循环</button>
+    <button data-m="next">接下一组</button>
   </div>
 </div>
 
 <div class="card">
-  <div style="font-weight:600;margin-bottom:6px">日志</div>
-  <div id="log">（等待操作…）</div>
+  <div class="now" id="nowTx">未开始</div>
+  <div class="cd" id="cdTx">—</div>
+  <div class="eps" id="epChips"></div>
+  <div style="margin-top:12px">
+    <button class="go" id="startBtn">▶ 开始连播</button>
+    <button id="nextBtn">下一集</button>
+    <button class="warn" id="stopBtn">停止</button>
+  </div>
 </div>
 
 <div class="card">
-  <div style="font-weight:600;margin-bottom:6px">测完请告诉我这 4 点</div>
-  <ol class="muted">
-    <li>有没有<b>自动</b>切到下一集？（日志里有没有「✓ 脚本切换成功」）</li>
-    <li>「下一集（手动点）」能不能切？</li>
-    <li>有没有弹出 Safari 的"阻止弹窗"提示？</li>
-    <li>日志里有没有红色 ✗ 报错？</li>
-    <li style="color:#ffd166">若打开后显示 403：那是抖音签名直链临时抽风，<b>回来再点一次「开始」</b>（会拿新签名），或把「线路」换 0/1 再试</li>
-  </ol>
+  <div class="muted" style="margin-bottom:6px">运行日志</div>
+  <div id="log">（等待开始…）</div>
+  <p class="muted" style="margin:10px 0 0">
+    <a href="index.html">← 回工作台管理分组</a><br>
+    连播期间请保持这个页面开着（切到别的标签页也不影响计时）。
+  </p>
 </div>
 
 <script>
 (function(){
   'use strict';
-  // 时长来自抖音合集接口（毫秒转秒）——自动连播必须按集用真实时长，不能拍脑袋
-  var EPS = [
-    {n:'025', videoId:'v0300fg10000d9k7utnog65s79brsv7g', line:0, sec:72},
-    {n:'026', videoId:'v0300fg10000d9kudfnog65rlkr8br8g', line:0, sec:213},
-    {n:'027', videoId:'v0300fg10000d9kvc4vog65hotcem630', line:0, sec:88},
-    {n:'028', videoId:'v0300fg10000d9lhbefog65ofmnek4k0', line:0, sec:287},
-    {n:'029', videoId:'v0300fg10000da60lvfog65n66njripg', line:1, sec:91},
-    {n:'030', videoId:'v0300fg10000d9m9h5vog65vlupu1g00', line:0, sec:314},
-    {n:'031', videoId:'v0300fg10000d9ma2hvog65mgb2r5o60', line:0, sec:86},
-    {n:'032', videoId:'v0300fg10000d9mt49vog65qfmrlnqg0', line:0, sec:273},
-    {n:'033', videoId:'v0300fg10000d9mubpfog65njagdv0dg', line:1, sec:90}
-  ];
-  var W_NAME = 'wowPlayer';
-  var w = null, i = 0, timer = null;
-  var elLog = document.getElementById('log');
-  var elTest = document.getElementById('testMode');
+  var videos = [], groups = [], group = null;
+  var w = null, idx = 0, timer = null, tick = null, deadline = 0;
+  var mode = 'stop';
+  var el = {
+    sel: document.getElementById('groupSel'),
+    nowTx: document.getElementById('nowTx'),
+    cdTx: document.getElementById('cdTx'),
+    chips: document.getElementById('epChips'),
+    log: document.getElementById('log'),
+    seg: document.getElementById('modeSeg')
+  };
 
   function log(msg, cls){
     var t = new Date().toTimeString().slice(0,8);
     var s = document.createElement('div');
     if(cls) s.className = cls;
     s.textContent = '[' + t + '] ' + msg;
-    elLog.appendChild(s);
-    elLog.scrollTop = elLog.scrollHeight;
+    el.log.appendChild(s);
+    el.log.scrollTop = el.log.scrollHeight;
   }
-  function url(ep){
-    var sel = document.getElementById('lineSel').value;
-    var line = (sel === 'auto') ? ep.line : parseInt(sel,10);
-    return 'https://aweme.snssdk.com/aweme/v1/playwm/?video_id=' + ep.videoId + '&ratio=540p&line=' + line;
+  function lsGet(k, def){ try{ var v = localStorage.getItem(k); return v ? JSON.parse(v) : def; }catch(e){ return def; } }
+  function lsSet(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+
+  videos = (lsGet('wow.videos', []) || []).filter(function(v){ return v && v.videoId; });
+  groups = lsGet('wow.groups', []) || [];
+  mode = lsGet('wow.playMode', 'stop');
+
+  function url(v){
+    return 'https://aweme.snssdk.com/aweme/v1/playwm/?video_id=' + v.videoId + '&ratio=540p&line=' + (v.line || 0);
   }
-  function waitSec(ep){ return elTest.checked ? 20 : (ep.sec || 180); }
-  function openEp(idx){
-    var ep = EPS[idx], u = url(ep);
-    log('尝试打开 第' + ep.n + '集…（与工作台「投屏」相同的 _blank 写法）');
-    w = window.open(u, '_blank');
-    if(!w){
-      log('✗ window.open 返回 null —— 仍被拦截。请检查：设置→Safari→「阻止弹出窗口」是否关闭；或地址栏左侧有无弹窗图标', 'bad');
-      return false;
-    }
-    log('已打开 第' + ep.n + '集（保留引用，稍后脚本切换）');
+  function epById(id){ return videos.filter(function(v){ return v.id === id; })[0]; }
+  function groupEps(g){ return (g.eps || []).map(epById).filter(Boolean); }
+  function sec(v){ return (v && v.sec) ? v.sec : 300; }
+
+  if(groups.length === 0){
+    el.sel.innerHTML = '<option>（还没有分组）</option>';
+    log('工作台里还没有分组，先去「连播分组」建一个', 'warn2');
+  }else{
+    el.sel.innerHTML = groups.map(function(g){
+      return '<option value="' + g.id + '">' + g.name + '（' + (g.eps||[]).length + '集）</option>';
+    }).join('');
+    var q = (location.search || '').match(/g=([^&]+)/);
+    var pickId = q ? decodeURIComponent(q[1]) : lsGet('wow.playGroup', null);
+    if(pickId && groups.some(function(g){ return g.id === pickId; })) el.sel.value = pickId;
+  }
+  Array.prototype.forEach.call(el.seg.querySelectorAll('button'), function(b){
+    b.className = (b.getAttribute('data-m') === mode) ? 'on' : '';
+    b.addEventListener('click', function(){
+      mode = b.getAttribute('data-m');
+      lsSet('wow.playMode', mode);
+      Array.prototype.forEach.call(el.seg.querySelectorAll('button'), function(x){
+        x.className = (x.getAttribute('data-m') === mode) ? 'on' : '';
+      });
+      log('播完行为改为：' + (mode === 'stop' ? '播完就停' : mode === 'loop' ? '整组循环' : '自动接下一组'));
+    });
+  });
+  el.sel.addEventListener('change', function(){
+    group = groups.filter(function(g){ return g.id === el.sel.value; })[0] || null;
+    lsSet('wow.playGroup', el.sel.value);
+    idx = 0; renderChips(); log('切换到分组：' + (group ? group.name : '—'));
+  });
+  group = groups.filter(function(g){ return g.id === el.sel.value; })[0] || null;
+
+  function renderChips(){
+    if(!group){ el.chips.innerHTML=''; el.nowTx.textContent='未开始'; return; }
+    var eps = groupEps(group);
+    el.chips.innerHTML = eps.map(function(v, i){
+      var cls = i === idx ? 'ep on' : (i < idx ? 'ep done' : 'ep');
+      return '<span class="' + cls + '">' + v.number + '</span>';
+    }).join('');
+    var cur = eps[idx];
+    el.nowTx.textContent = cur ? ('正在播放：第 ' + cur.number + ' 集（' + (idx+1) + '/' + eps.length + '）') : '未开始';
+  }
+
+  function startTick(){
+    clearInterval(tick);
+    tick = setInterval(function(){
+      if(!deadline){ el.cdTx.textContent = '—'; return; }
+      var left = Math.round((deadline - Date.now()) / 1000);
+      el.cdTx.textContent = left > 0 ? ('距下一集约 ' + left + ' 秒') : '即将切换…';
+    }, 1000);
+  }
+  function openCurrent(){
+    var eps = groupEps(group), v = eps[idx];
+    if(!v) return false;
+    log('打开 第' + v.number + '集（时长约 ' + sec(v) + ' 秒）');
+    w = window.open(url(v), '_blank');
+    if(!w){ log('✗ 打开失败（被浏览器拦截）。请回到本页再点「开始连播」', 'bad'); return false; }
+    deadline = Date.now() + sec(v) * 1000;
+    renderChips(); startTick();
     return true;
   }
-  // 关键验证点：不经用户点击，用脚本改变已打开窗口的地址
-  function autoAdvance(){
-    var ep = EPS[i], u = url(ep);
+  function switchTo(v){
     if(!w || w.closed){
-      log('⚠ 播放窗口丢失，改为重新打开（无手势多半被拦）', 'warn2');
-      if(!openEp(i)) log('结论：自动连播走不通，只能手动点「下一集」', 'bad');
+      log('⚠ 播放窗口丢失，尝试重开…', 'warn2');
+      if(!openCurrent()) stopAll('窗口无法恢复，已停止');
       return;
     }
     try{
-      w.location.replace(u);
-      log('✓ 脚本切换成功 → 第' + ep.n + '集（自动连播可行！）');
+      w.location.replace(url(v));
+      log('✓ 已切到 第' + v.number + '集');
+      deadline = Date.now() + sec(v) * 1000;
+      renderChips();
     }catch(e){
-      log('✗ 脚本切换被拒绝：' + (e && e.name) + ' — Safari 不允许脚本改该窗口', 'bad');
-      log('  → 尝试 window.open 兜底（无手势通常被拦）', 'warn2');
-      if(!openEp(i)) log('结论：自动连播走不通，只能手动点「下一集」', 'bad');
+      log('✗ 切换被拒：' + (e && e.name) + '，尝试重开窗口…', 'bad');
+      if(!openCurrent()) stopAll('切换失败，已停止');
     }
   }
   function scheduleNext(){
     clearTimeout(timer);
-    var sec = waitSec(EPS[i]);
-    log('⏱ 等 ' + sec + ' 秒后切下一集' + (elTest.checked ? '（测试模式）' : '（真实时长）'));
+    var eps = groupEps(group), v = eps[idx];
     timer = setTimeout(function(){
-      i++;
-      if(i >= EPS.length){ log('测试结束：已走完 9 集。看上面有没有「✓ 脚本切换成功」'); return; }
-      autoAdvance();
-      scheduleNext();
-    }, sec*1000);
+      idx++;
+      if(idx < eps.length){ switchTo(eps[idx]); scheduleNext(); return; }
+      if(mode === 'loop'){
+        idx = 0;
+        log('整组播完，回到第 ' + eps[0].number + ' 集重播');
+        switchTo(eps[0]); scheduleNext(); return;
+      }
+      if(mode === 'next'){
+        var gi = groups.indexOf(group);
+        if(gi >= 0 && gi + 1 < groups.length){
+          group = groups[gi + 1]; idx = 0;
+          el.sel.value = group.id; lsSet('wow.playGroup', group.id);
+          log('本组播完，自动接下一组：' + group.name);
+          renderChips();
+          if(openCurrent()) scheduleNext();
+          return;
+        }
+        log('已经是最后一组，结束');
+      }
+      stopAll('全部播完');
+    }, sec(v) * 1000);
+  }
+  function stopAll(msg){
+    clearTimeout(timer); clearInterval(tick);
+    deadline = 0; el.cdTx.textContent = '—';
+    log(msg || '已停止');
   }
 
-  document.getElementById('start').addEventListener('click', function(){
-    clearTimeout(timer); i = 0; elLog.innerHTML = '';
-    log('▶ 开始（手势内打开第一集）');
-    if(openEp(i)) scheduleNext();
+  document.getElementById('startBtn').addEventListener('click', function(){
+    if(!group){ log('请先在工作台「连播分组」里建一个分组', 'warn2'); return; }
+    idx = 0; renderChips();
+    log('▶ 开始连播：' + group.name + '（' + groupEps(group).length + ' 集）');
+    if(openCurrent()) scheduleNext();
   });
-  document.getElementById('manual').addEventListener('click', function(){
-    i = (i + 1) % EPS.length;
-    log('手动点「下一集」→ 目标 第' + EPS[i].n + '集（手势内，一般不会被拦）');
-    if(w && !w.closed){
-      try{ w.location.replace(url(EPS[i])); log('✓ 手动切换成功'); return; }
-      catch(e){ log('✗ 手动切换也报错：' + (e && e.name), 'bad'); }
-    }
-    openEp(i);
+  document.getElementById('nextBtn').addEventListener('click', function(){
+    if(!group) return;
+    var eps = groupEps(group);
+    idx = (idx + 1) % eps.length;
+    switchTo(eps[idx]);
+    clearTimeout(timer); scheduleNext();
   });
-  document.getElementById('stop').addEventListener('click', function(){ clearTimeout(timer); log('已停止计时'); });
-  elTest.addEventListener('change', function(){ log('切换为：' + (elTest.checked ? '测试模式(20秒)' : '真实时长模式')); });
+  document.getElementById('stopBtn').addEventListener('click', function(){ stopAll('已手动停止'); });
+
+  renderChips();
+  log('就绪：' + (group ? ('当前分组 ' + group.name) : '请先选/建分组'));
 })();
 </script>
 </body>
