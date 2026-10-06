@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="referrer" content="no-referrer">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<title>三种取流方式测速 · 临时验证页</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;padding:18px;background:#0f1115;color:#e8e8ea;
+       font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;font-size:14px;line-height:1.6}
+  h1{font-size:17px;margin:0 0 4px}
+  .muted{color:#8b8f98;font-size:12px}
+  .card{background:#171a21;border-radius:12px;padding:14px;margin:12px 0}
+  button{background:#2a3038;color:#fff;border:0;border-radius:10px;padding:12px 16px;font-size:15px;margin:4px 4px 0 0}
+  button.go{background:#3b82f6;font-weight:600}
+  select{background:#0f1115;color:#fff;border:1px solid #2a3038;border-radius:8px;padding:9px;font-size:15px;width:100%}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+  th,td{padding:8px 6px;border-bottom:1px solid #23272f;text-align:left}
+  th{color:#8b8f98;font-weight:500;font-size:12px}
+  .big{font-size:15px;font-weight:700}
+  .ok{color:#7ee2a8}.bad{color:#ff8f8f}.mid{color:#ffd166}
+  #log{background:#0b0d11;border:1px solid #23272f;border-radius:10px;padding:10px;font-size:12px;
+       white-space:pre-wrap;max-height:220px;overflow:auto;color:#9ee6a0;margin-top:8px}
+</style>
+</head>
+<body>
+<h1>📊 三种取流方式测速</h1>
+<p class="muted">目的：找出哪条路既<b>快</b>又能<b>被页面控制</b>。全程只读不写，不改你任何现有功能。</p>
+
+<div class="card">
+  <div class="muted" style="margin-bottom:6px">选一集来测（建议先用最小的，测完可换大集复核）</div>
+  <select id="epSel">
+    <option value="031">第31集 · 9.7MB / 86秒（最小，推荐先测）</option>
+    <option value="025">第25集 · 11.2MB / 72秒</option>
+    <option value="027">第27集 · 10.6MB / 88秒</option>
+    <option value="030">第30集 · 43.1MB / 314秒（大集，复核用）</option>
+    <option value="032">第32集 · 61.6MB / 273秒（最大，复核用）</option>
+  </select>
+  <div style="margin-top:10px">
+    <button class="go" id="runBtn">▶ 开始测速（约 1 分钟）</button>
+  </div>
+  <p class="muted" style="margin:8px 0 0">测试时会静音播放，不会出声；测完请告诉我表格里的数字。</p>
+</div>
+
+<div class="card">
+  <table>
+    <tr><th>方式</th><th>速度</th><th>状态</th></tr>
+    <tr><td>A 页面内直接播<br><span class="muted">（现在的方式）</span></td><td class="big" id="aSpd">—</td><td id="aSt">待测</td></tr>
+    <tr><td>C 中转后播<br><span class="muted">（同源，可精确控进度）</span></td><td class="big" id="cSpd">—</td><td id="cSt">待测</td></tr>
+    <tr><td>B 整集抓下来再播<br><span class="muted">（同源，可精确控进度）</span></td><td class="big" id="bSpd">—</td><td id="bSt">待测</td></tr>
+  </table>
+  <div id="log">（等待开始…）</div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var EPS = {
+    '025':{v:'v0300fg10000d9k7utnog65s79brsv7g',l:0,sec:72,mb:11.2},
+    '026':{v:'v0300fg10000d9kudfnog65rlkr8br8g',l:0,sec:213,mb:24.3},
+    '027':{v:'v0300fg10000d9kvc4vog65hotcem630',l:0,sec:88,mb:10.6},
+    '028':{v:'v0300fg10000d9lhbefog65ofmnek4k0',l:0,sec:287,mb:26.8},
+    '029':{v:'v0300fg10000da60lvfog65n66njripg',l:1,sec:91,mb:11.5},
+    '030':{v:'v0300fg10000d9m9h5vog65vlupu1g00',l:0,sec:314,mb:43.1},
+    '031':{v:'v0300fg10000d9ma2hvog65mgb2r5o60',l:0,sec:86,mb:9.7},
+    '032':{v:'v0300fg10000d9mt49vog65qfmrlnqg0',l:0,sec:273,mb:61.6},
+    '033':{v:'v0300fg10000d9mubpfog65njagdv0dg',l:1,sec:90,mb:18.3}
+  };
+  var TEST_MS = 12000;
+  var el = {
+    sel: document.getElementById('epSel'),
+    log: document.getElementById('log'),
+    aSpd: document.getElementById('aSpd'), aSt: document.getElementById('aSt'),
+    cSpd: document.getElementById('cSpd'), cSt: document.getElementById('cSt'),
+    bSpd: document.getElementById('bSpd'), bSt: document.getElementById('bSt')
+  };
+  function log(m, cls){
+    var s = document.createElement('div');
+    if(cls) s.className = cls;
+    s.textContent = '[' + new Date().toTimeString().slice(0,8) + '] ' + m;
+    el.log.appendChild(s); el.log.scrollTop = el.log.scrollHeight;
+    console.log(m);
+  }
+  function direct(n){
+    var e = EPS[n];
+    return 'https://aweme.snssdk.com/aweme/v1/playwm/?video_id=' + e.v + '&ratio=540p&line=' + e.l;
+  }
+  // 测视频元素：看这段时间缓冲了多少"秒的视频"，再换算成 MB/s
+  function measureVideo(n, src, label){
+    return new Promise(function(resolve){
+      var e = EPS[n];
+      var mbPerSec = e.mb / e.sec;           // 每一秒视频约多少 MB
+      var v = document.createElement('video');
+      v.muted = true; v.playsInline = true; v.setAttribute('playsinline','');
+      v.setAttribute('webkit-playsinline',''); v.preload = 'auto';
+      v.style.cssText = 'position:fixed;width:2px;height:2px;opacity:0;left:0;top:0';
+      document.body.appendChild(v);
+      var t0 = Date.now(), err = null, started = false;
+      v.addEventListener('error', function(){ err = '加载错误'; });
+      v.addEventListener('playing', function(){ started = true; });
+      v.src = src; v.load();
+      var p = v.play(); if(p && p.catch) p.catch(function(){});
+      var iv = setInterval(function(){
+        var el2 = Date.now() - t0;
+        if(err){ clearInterval(iv); resolve({mbps:0, err:err}); return; }
+        if(el2 >= TEST_MS){
+          clearInterval(iv);
+          var bufSec = 0;
+          try{ if(v.buffered.length) bufSec = v.buffered.end(v.buffered.length-1); }catch(x){}
+          var mb = bufSec * mbPerSec;
+          var mbps = mb / (el2/1000);
+          v.pause(); v.removeAttribute('src'); v.load(); v.remove();
+          resolve({mbps: mbps, bufSec: bufSec, started: started});
+        }
+      }, 500);
+    });
+  }
+  // 测 fetch 抓整集：真实字节数，最准
+  function measureFetch(n){
+    return new Promise(function(resolve){
+      var t0 = Date.now(), got = 0, done = false;
+      var ctl = new AbortController();
+      setTimeout(function(){ if(!done) ctl.abort(); }, 60000);
+      fetch(direct(n), {signal: ctl.signal}).then(function(r){
+        if(!r.ok) throw new Error('HTTP ' + r.status);
+        var reader = r.body.getReader();
+        function pump(){
+          reader.read().then(function(res){
+            if(res.done){
+              done = true;
+              var el2 = Date.now() - t0;
+              resolve({mbps: (got/1048576)/(el2/1000), total: got, ms: el2, ok:true});
+              return;
+            }
+            got += res.value.length;
+            if(Date.now() - t0 > 25000){ // 超 25 秒就按当前速度估算，不硬等
+              done = true; ctl.abort();
+              var e2 = Date.now() - t0;
+              resolve({mbps: (got/1048576)/(e2/1000), total: got, ms: e2, partial:true});
+              return;
+            }
+            pump();
+          }).catch(function(err){
+            if(done) return;
+            done = true;
+            var e2 = Date.now() - t0;
+            resolve({mbps: (got/1048576)/(e2/1000), total: got, ms: e2, err: String(err)});
+          });
+        }
+        pump();
+      }).catch(function(err){
+        resolve({mbps:0, err: String(err)});
+      });
+    });
+  }
+  function ensureSW(){
+    if(!('serviceWorker' in navigator)) return Promise.resolve(false);
+    return navigator.serviceWorker.register('sw.js').then(function(reg){
+      return navigator.serviceWorker.ready;
+    }).then(function(){ return !!navigator.serviceWorker.controller; })
+      .catch(function(e){ log('中转脚本注册失败：' + e, 'bad'); return false; });
+  }
+  function fmt(m){
+    if(!m) return '—';
+    if(m.err) return '失败';
+    return m.mbps.toFixed(2) + ' MB/s';
+  }
+  function set(id, txt, cls){ document.getElementById(id).textContent = txt; if(cls) document.getElementById(id).className = 'big ' + cls; }
+
+  document.getElementById('runBtn').addEventListener('click', function(){
+    var n = el.sel.value;
+    var btn = document.getElementById('runBtn');
+    btn.disabled = true; btn.textContent = '测试中…';
+    el.log.innerHTML = '';
+    log('开始测速：第' + n + '集（' + EPS[n].mb + 'MB / ' + EPS[n].sec + '秒）');
+
+    measureVideo(n, direct(n), 'A').then(function(r){
+      set('aSpd', fmt(r), r.mbps >= 1.5 ? 'ok' : 'bad');
+      el.aSt.textContent = r.err ? ('失败：' + r.err)
+        : (r.started ? '能播 · 缓冲' + Math.round(r.bufSec) + '秒' : '未起播 · 缓冲' + Math.round(r.bufSec) + '秒');
+      log('A 结果：' + (r.err ? r.err : (r.mbps.toFixed(2) + ' MB/s')));
+      return ensureSW();
+    }).then(function(swOk){
+      if(!swOk){ el.cSt.textContent = '本浏览器不支持中转'; log('C 跳过：不支持', 'mid'); return null; }
+      log('C：中转已就绪，开始测');
+      return measureVideo(n, './__p/' + n + '.mp4', 'C');
+    }).then(function(r){
+      if(!r) return;
+      set('cSpd', fmt(r), r.mbps >= 1.5 ? 'ok' : 'bad');
+      el.cSt.textContent = r.err ? ('失败：' + r.err) : (r.started ? '能播 · 缓冲' + Math.round(r.bufSec) + '秒' : '未起播 · 缓冲' + Math.round(r.bufSec) + '秒');
+      log('C 结果：' + (r.err ? r.err : (r.mbps.toFixed(2) + ' MB/s')));
+      return measureFetch(n);
+    }).then(function(r){
+      if(!r) return;
+      set('bSpd', fmt(r), r.mbps >= 1.5 ? 'ok' : 'bad');
+      el.bSt.textContent = r.err ? ('中断/失败') : ('抓到 ' + (r.total/1048576).toFixed(1) + 'MB，用时 ' + (r.ms/1000).toFixed(1) + '秒' + (r.partial ? '（提前中止按速度估算）' : ''));
+      log('B 结果：' + (r.err ? r.err : (r.mbps.toFixed(2) + ' MB/s')));
+      btn.disabled = false; btn.textContent = '▶ 再测一次';
+      log('全部测完。请把表格里的三个数字告诉我。');
+    }).catch(function(e){
+      log('测试异常：' + e, 'bad');
+      btn.disabled = false; btn.textContent = '▶ 开始测速';
+    });
+  });
+})();
+</script>
+</body>
+</html>
