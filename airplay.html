@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="referrer" content="no-referrer">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<title>验证页 · 页面内播 + 📡投屏 能否读到进度</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;padding:16px;background:#0f1115;color:#e8e8ea;
+       font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;font-size:14px;line-height:1.6}
+  h1{font-size:17px;margin:0 0 4px}
+  .muted{color:#8b8f98;font-size:12px}
+  .card{background:#171a21;border-radius:12px;padding:14px;margin:12px 0}
+  button{background:#2a3038;color:#fff;border:0;border-radius:10px;padding:11px 15px;font-size:15px;margin:4px 4px 0 0}
+  button.go{background:#3b82f6;font-weight:600}
+  select{background:#0f1115;color:#fff;border:1px solid #2a3038;border-radius:8px;padding:9px;font-size:15px;width:100%}
+  video{width:100%;max-height:34vh;background:#000;border-radius:10px;display:block}
+  .stat{font-size:13px;margin-top:8px;color:#ffd166}
+  #log{background:#0b0d11;border:1px solid #23272f;border-radius:10px;padding:10px;font-size:12px;
+       white-space:pre-wrap;max-height:220px;overflow:auto;color:#9ee6a0;margin-top:8px}
+  .bad{color:#ff8f8f}.star{color:#ffd166;font-weight:700}
+  a{color:#6ea8fe}
+</style>
+</head>
+<body>
+<h1>🔬 验证页（临时）</h1>
+<p class="muted">要验证：<b>页面内播放 + 📡投屏</b> 能不能同时做到「电视有画面」和「页面读到真实进度」。</p>
+
+<div class="card">
+  <div class="muted" style="margin-bottom:6px">选一集</div>
+  <select id="epSel">
+    <option value="031">第31集 · 9.7MB / 86秒</option>
+    <option value="025">第25集 · 11.2MB / 72秒</option>
+    <option value="027">第27集 · 10.6MB / 88秒</option>
+    <option value="033">第33集 · 18.3MB / 90秒</option>
+  </select>
+  <video id="v" playsinline webkit-playsinline controls preload="auto" x-webkit-airplay="allow"></video>
+  <div class="stat" id="stat">未开始</div>
+  <div style="margin-top:10px">
+    <button class="go" id="playBtn">▶ 播放</button>
+    <button id="airBtn">📡 投到电视</button>
+    <button id="nextBtn">下一集</button>
+  </div>
+  <label style="display:block;margin-top:10px;font-size:13px">
+    <input type="checkbox" id="autoNext"> 播完自动切下一集（验证真进度）
+  </label>
+</div>
+
+<div class="card">
+  <div class="muted" style="margin-bottom:6px">事件日志（看有没有「★ 已播完」）</div>
+  <div id="log">（等待操作…）</div>
+  <p class="muted" style="margin:10px 0 0"><a href="index.html">← 回工作台</a></p>
+</div>
+
+<div class="card">
+  <div class="muted" style="margin-bottom:6px">测试步骤</div>
+  <ol class="muted" style="margin:0;padding-left:18px">
+    <li>电视上先打开<b>乐播</b></li>
+    <li>这里点「▶ 播放」，确认手机能正常播、有声音</li>
+    <li>点「📡 投到电视」→ 选乐播/电视</li>
+    <li>观察：电视有没有画面？手机上进度条还走不走？</li>
+    <li>等播完，看日志有没有「★ 已播完」——<b>这条最关键</b></li>
+  </ol>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var EPS = {
+    '025':{v:'v0300fg10000d9k7utnog65s79brsv7g',l:0,sec:72},
+    '027':{v:'v0300fg10000d9kvc4vog65hotcem630',l:0,sec:88},
+    '031':{v:'v0300fg10000d9ma2hvog65mgb2r5o60',l:0,sec:86},
+    '033':{v:'v0300fg10000d9mubpfog65njagdv0dg',l:1,sec:90}
+  };
+  var ORDER = ['025','027','031','033'];
+  var v = document.getElementById('v');
+  var elStat = document.getElementById('stat');
+  var elLog = document.getElementById('log');
+  var idx = 0;
+  var lastLog = 0;
+
+  function log(m, cls){
+    var s = document.createElement('div');
+    if(cls) s.className = cls;
+    s.textContent = '[' + new Date().toTimeString().slice(0,8) + '] ' + m;
+    elLog.appendChild(s); elLog.scrollTop = elLog.scrollHeight;
+  }
+  function cur(){ return document.getElementById('epSel').value; }
+  function url(n){
+    var e = EPS[n];
+    return 'https://aweme.snssdk.com/aweme/v1/playwm/?video_id=' + e.v + '&ratio=540p&line=' + e.l;
+  }
+  function load(n){
+    idx = ORDER.indexOf(n);
+    v.src = url(n);
+    v.load();
+    log('载入 第' + n + '集');
+  }
+
+  document.getElementById('epSel').addEventListener('change', function(){ load(cur()); });
+
+  document.getElementById('playBtn').addEventListener('click', function(){
+    log('点了播放（用户手势内）');
+    if(!v.src) load(cur());
+    var p = v.play();
+    if(p && p.catch) p.catch(function(e){ log('播放被拒：' + (e && e.name), 'bad'); });
+  });
+
+  document.getElementById('airBtn').addEventListener('click', function(){
+    log('点了 📡，尝试弹出投屏选择…');
+    if(v.webkitShowPlaybackTargetPicker){
+      try{ v.webkitShowPlaybackTargetPicker(); log('已调用 webkitShowPlaybackTargetPicker'); return; }catch(e){ log('调用失败：' + e, 'bad'); }
+    }
+    if(v.webkitShowAirPlayPicker){
+      try{ v.webkitShowAirPlayPicker(); log('已调用 webkitShowAirPlayPicker'); return; }catch(e){ log('调用失败：' + e, 'bad'); }
+    }
+    log('✗ 这个浏览器不支持页面内调起投屏选择器（那就只能从控制中心投）', 'bad');
+  });
+
+  document.getElementById('nextBtn').addEventListener('click', function(){
+    idx = (idx + 1) % ORDER.length;
+    document.getElementById('epSel').value = ORDER[idx];
+    load(ORDER[idx]);
+    var p = v.play(); if(p && p.catch) p.catch(function(){});
+  });
+
+  v.addEventListener('loadedmetadata', function(){
+    log('已获取时长：' + Math.round(v.duration) + ' 秒');
+  });
+  v.addEventListener('playing', function(){ log('开始播放'); });
+  v.addEventListener('timeupdate', function(){
+    var now = Date.now();
+    if(now - lastLog > 5000){
+      lastLog = now;
+      log('进度：' + Math.round(v.currentTime) + ' / ' + Math.round(v.duration) + ' 秒');
+    }
+    var buf = 0;
+    try{ if(v.buffered.length) buf = v.buffered.end(v.buffered.length-1); }catch(e){}
+    elStat.textContent = '进度 ' + Math.round(v.currentTime) + 's / ' + Math.round(v.duration || 0) + 's　已缓冲 ' + Math.round(buf) + 's';
+  });
+  v.addEventListener('ended', function(){
+    log('★ 已播完（页面感知到了！这就是真进度连播的基础）', 'star');
+    if(document.getElementById('autoNext').checked){
+      idx = (idx + 1) % ORDER.length;
+      document.getElementById('epSel').value = ORDER[idx];
+      log('自动切换 → 第' + ORDER[idx] + '集');
+      load(ORDER[idx]);
+      var p = v.play(); if(p && p.catch) p.catch(function(e){ log('自动播放被拒：' + (e && e.name), 'bad'); });
+    }
+  });
+  v.addEventListener('error', function(){ log('✗ 加载出错', 'bad'); });
+  v.addEventListener('webkitplaybacktargetavailabilitychanged', function(e){
+    log('可投屏设备状态：' + e.availability);
+  });
+  v.addEventListener('webkitcurrentplaybacktargetchanged', function(){
+    log('播放目标已切换（可能已投到电视）');
+  });
+
+  load(cur());
+  log('就绪。先确认手机能播，再点 📡 投屏。');
+})();
+</script>
+</body>
+</html>
