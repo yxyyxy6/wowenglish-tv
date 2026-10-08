@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="referrer" content="no-referrer">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<title>真进度连播 · Wow English TV</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;padding:16px;background:#0f1115;color:#e8e8ea;
+       font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;font-size:14px;line-height:1.6}
+  h1{font-size:17px;margin:0 0 4px}
+  .muted{color:#8b8f98;font-size:12px}
+  .card{background:#171a21;border-radius:12px;padding:14px;margin:12px 0}
+  button{background:#2a3038;color:#fff;border:0;border-radius:10px;padding:11px 15px;font-size:15px;margin:4px 4px 0 0}
+  button.go{background:#3b82f6;font-weight:600}
+  button.warn{background:#ef4444}
+  select{background:#0f1115;color:#fff;border:1px solid #2a3038;border-radius:8px;padding:9px;font-size:15px;width:100%}
+  video{width:100%;max-height:36vh;background:#000;border-radius:10px;display:block}
+  .seg{display:flex;gap:6px;margin-top:8px}
+  .seg button{flex:1;margin:0;font-size:13px;padding:10px 6px;background:#2a3038}
+  .seg button.on{background:#3b82f6;font-weight:600}
+  .now{font-size:22px;font-weight:700;margin:8px 0 2px}
+  .stat{font-size:13px;color:#ffd166}
+  .eps{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .ep{padding:5px 10px;border-radius:999px;background:#2a3038;font-size:12px;color:#9aa0aa}
+  .ep.on{background:#3b82f6;color:#fff;font-weight:600}
+  .ep.done{background:#1c3f2b;color:#7ee2a8}
+  #log{background:#0b0d11;border:1px solid #23272f;border-radius:10px;padding:10px;font-size:12px;
+       white-space:pre-wrap;max-height:200px;overflow:auto;color:#9ee6a0;margin-top:8px}
+  .bad{color:#ff8f8f}.star{color:#ffd166;font-weight:700}.mid{color:#ffd166}
+  a{color:#6ea8fe}
+</style>
+</head>
+<body>
+<h1>🎯 真进度连播</h1>
+<p class="muted">页面内播放 → <b>播完立刻自动切下一集</b>；拖进度条、暂停都完全同步。投屏请点 📡。</p>
+
+<div class="card">
+  <div class="muted" style="margin-bottom:6px">选择分组</div>
+  <select id="groupSel"></select>
+  <div class="muted" style="margin:10px 0 4px">这一组播完之后</div>
+  <div class="seg" id="modeSeg">
+    <button data-m="stop">播完就停</button>
+    <button data-m="loop">整组循环</button>
+    <button data-m="next">接下一组</button>
+  </div>
+</div>
+
+<div class="card">
+  <video id="v" playsinline webkit-playsinline controls preload="auto" x-webkit-airplay="allow"></video>
+  <div class="now" id="nowTx">未开始</div>
+  <div class="stat" id="stat">—</div>
+  <div class="eps" id="epChips"></div>
+  <div style="margin-top:12px">
+    <button class="go" id="startBtn">▶ 开始连播</button>
+    <button id="airBtn">📡 投到电视</button>
+    <button id="nextBtn">下一集</button>
+    <button class="warn" id="stopBtn">停止</button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="muted" style="margin-bottom:6px">运行日志</div>
+  <div id="log">（等待开始…）</div>
+  <p class="muted" style="margin:10px 0 0">
+    <a href="index.html">← 回工作台管理分组</a> ·
+    <a href="play.html">倒计时版（原生播放器）</a>
+  </p>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var videos=[], groups=[], group=null, direct={}, directUpdated='';
+  var idx=0, mode='stop';
+  var v=document.getElementById('v');
+  var el={
+    sel:document.getElementById('groupSel'), nowTx:document.getElementById('nowTx'),
+    stat:document.getElementById('stat'), chips:document.getElementById('epChips'),
+    log:document.getElementById('log'), seg:document.getElementById('modeSeg')
+  };
+  function log(m,cls){
+    var s=document.createElement('div'); if(cls) s.className=cls;
+    s.textContent='['+new Date().toTimeString().slice(0,8)+'] '+m;
+    el.log.appendChild(s); el.log.scrollTop=el.log.scrollHeight;
+  }
+  function lsGet(k,d){ try{var x=localStorage.getItem(k); return x?JSON.parse(x):d;}catch(e){return d;} }
+  function lsSet(k,val){ try{localStorage.setItem(k,JSON.stringify(val));}catch(e){} }
+
+  videos=(lsGet('wow.videos',[])||[]).filter(function(x){return x&&x.videoId;});
+  groups=lsGet('wow.groups',[])||[];
+  mode=lsGet('wow.playMode','stop');
+
+  // 直链：优先用自动刷新的直链（投屏全速），取不到就退回跳转地址
+  function srcFor(ep){
+    var d=direct[ep.videoId];
+    if(d&&d.url) return {url:d.url, kind:'直链', sec:(d.sec||ep.sec||300)};
+    return {url:'https://aweme.snssdk.com/aweme/v1/playwm/?video_id='+ep.videoId+'&ratio=540p&line='+(ep.line||0),
+            kind:'跳转地址(慢)', sec:(ep.sec||300)};
+  }
+  function epById(id){ return videos.filter(function(x){return x.id===id;})[0]; }
+  function groupEps(g){ return (g.eps||[]).map(epById).filter(Boolean); }
+
+  fetch('direct.json?t='+Date.now()).then(function(r){return r.json();}).then(function(j){
+    direct=(j&&j.eps)||{}; directUpdated=(j&&j.updated)||'';
+    var hit=videos.filter(function(x){return !!direct[x.videoId];}).length;
+    log('已载入直链：'+Object.keys(direct).length+' 条（更新时间 '+(directUpdated||'未知')+'）');
+    log('你的剧集中有 '+hit+'/'+videos.length+' 集能用直链（其余会用跳转地址，投屏较慢）', hit<videos.length?'mid':null);
+    renderChips();
+  }).catch(function(e){
+    log('✗ 直链文件读取失败，将全部使用跳转地址（投屏可能慢）：'+e,'bad');
+  });
+
+  if(groups.length===0){
+    el.sel.innerHTML='<option>（还没有分组）</option>';
+    log('请回工作台「连播分组」建一个分组','mid');
+  }else{
+    el.sel.innerHTML=groups.map(function(g){
+      return '<option value="'+g.id+'">'+g.name+'（'+(g.eps||[]).length+'集）</option>';
+    }).join('');
+    var q=(location.search||'').match(/g=([^&]+)/);
+    var pid=q?decodeURIComponent(q[1]):lsGet('wow.playGroup',null);
+    if(pid&&groups.some(function(g){return g.id===pid;})) el.sel.value=pid;
+  }
+  Array.prototype.forEach.call(el.seg.querySelectorAll('button'),function(b){
+    b.className=(b.getAttribute('data-m')===mode)?'on':'';
+    b.addEventListener('click',function(){
+      mode=b.getAttribute('data-m'); lsSet('wow.playMode',mode);
+      Array.prototype.forEach.call(el.seg.querySelectorAll('button'),function(x){
+        x.className=(x.getAttribute('data-m')===mode)?'on':'';
+      });
+      log('播完行为改为：'+(mode==='stop'?'播完就停':mode==='loop'?'整组循环':'自动接下一组'));
+    });
+  });
+  el.sel.addEventListener('change',function(){
+    group=groups.filter(function(g){return g.id===el.sel.value;})[0]||null;
+    lsSet('wow.playGroup',el.sel.value); idx=0; renderChips();
+  });
+  group=groups.filter(function(g){return g.id===el.sel.value;})[0]||null;
+
+  function renderChips(){
+    if(!group){el.chips.innerHTML='';el.nowTx.textContent='未开始';return;}
+    var eps=groupEps(group);
+    el.chips.innerHTML=eps.map(function(x,i){
+      var c=i===idx?'ep on':(i<idx?'ep done':'ep');
+      return '<span class="'+c+'">'+x.number+'</span>';
+    }).join('');
+    var cur=eps[idx];
+    el.nowTx.textContent=cur?('正在播放：第'+cur.number+'集（'+(idx+1)+'/'+eps.length+'）'):'未开始';
+  }
+
+  function playCurrent(){
+    var eps=groupEps(group), ep=eps[idx];
+    if(!ep) return false;
+    var s=srcFor(ep);
+    log('播放 第'+ep.number+'集 · '+s.kind+' · 时长约'+s.sec+'秒');
+    v.src=s.url; v.load();
+    var p=v.play();
+    if(p&&p.catch) p.catch(function(e){
+      if(e&&e.name==='NotAllowedError'){ log('请再点一次播放（iPhone 需要手势）','mid'); }
+      else log('播放失败：'+(e&&e.name),'bad');
+    });
+    renderChips();
+    return true;
+  }
+
+  v.addEventListener('loadedmetadata',function(){ log('时长确认：'+Math.round(v.duration)+' 秒'); });
+  v.addEventListener('playing',function(){ log('开始播放'); });
+  v.addEventListener('timeupdate',function(){
+    var b=0; try{ if(v.buffered.length) b=v.buffered.end(v.buffered.length-1); }catch(e){}
+    el.stat.textContent='进度 '+Math.round(v.currentTime)+'s / '+Math.round(v.duration||0)+'s　已缓冲 '+Math.round(b)+'s';
+  });
+  v.addEventListener('ended',function(){
+    log('★ 本集播完（真进度感知）','star');
+    var eps=groupEps(group);
+    idx++;
+    if(idx<eps.length){ playCurrent(); return; }
+    if(mode==='loop'){ idx=0; log('整组播完，回到第1集重播'); playCurrent(); return; }
+    if(mode==='next'){
+      var gi=groups.indexOf(group);
+      if(gi>=0&&gi+1<groups.length){
+        group=groups[gi+1]; idx=0; el.sel.value=group.id; lsSet('wow.playGroup',group.id);
+        log('本组播完，自动接下一组：'+group.name); renderChips(); playCurrent(); return;
+      }
+      log('已经是最后一组');
+    }
+    log('全部播完'); renderChips();
+  });
+  v.addEventListener('error',function(){ log('✗ 加载出错（可能是直链过期，下一轮会自动刷新）','bad'); });
+
+  document.getElementById('startBtn').addEventListener('click',function(){
+    if(!group){ log('请先回工作台建分组','mid'); return; }
+    idx=0; renderChips();
+    log('▶ 开始连播：'+group.name+'（'+groupEps(group).length+' 集）');
+    playCurrent();
+  });
+  document.getElementById('nextBtn').addEventListener('click',function(){
+    if(!group) return;
+    var eps=groupEps(group); idx=(idx+1)%eps.length; playCurrent();
+  });
+  document.getElementById('stopBtn').addEventListener('click',function(){
+    v.pause(); log('已停止');
+  });
+  document.getElementById('airBtn').addEventListener('click',function(){
+    log('点 📡，尝试弹出投屏选择…');
+    if(v.webkitShowPlaybackTargetPicker){
+      try{ v.webkitShowPlaybackTargetPicker(); log('已调起投屏选择器'); return; }catch(e){ log('调用失败：'+e,'bad'); }
+    }
+    if(v.webkitShowAirPlayPicker){
+      try{ v.webkitShowAirPlayPicker(); log('已调起投屏选择器'); return; }catch(e){ log('调用失败：'+e,'bad'); }
+    }
+    log('✗ 浏览器不支持页面内调起，请从控制中心投屏','bad');
+  });
+  v.addEventListener('webkitplaybacktargetavailabilitychanged',function(e){
+    log('可投屏设备：'+e.availability);
+  });
+  v.addEventListener('webkitcurrentplaybacktargetchanged',function(){
+    log('播放目标已切换（可能已投到电视）');
+  });
+
+  renderChips();
+  log('就绪：'+(group?('当前分组 '+group.name):'请先选/建分组'));
+})();
+</script>
+</body>
+</html>
