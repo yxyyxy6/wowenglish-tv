@@ -15,7 +15,7 @@ jobs:
           python-version: '3.11'
       - name: 取直链
         env:
-          MIX_IDS: '[{"id":"7669019617909540899","season":1,"include":[[25,33]]},{"id":"7670150022856214564","season":2}]'
+          MIX_IDS: '[{"id":"7669019617909540899","season":1},{"id":"7670150022856214564","season":2}]'
         run: python3 tools/refresh_direct.py
       - name: 提交
         run: |
