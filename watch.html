@@ -74,7 +74,7 @@
 (function(){
   'use strict';
   var videos=[], groups=[], group=null, direct={}, directUpdated='';
-  var idx=0, mode='stop';
+  var idx=0, mode='stop', startedOk=false;
   var v=document.getElementById('v');
   var el={
     sel:document.getElementById('groupSel'), nowTx:document.getElementById('nowTx'),
@@ -156,6 +156,7 @@
     if(!ep) return false;
     var s=srcFor(ep);
     log('播放 第'+ep.number+'集 · '+s.kind+' · 时长约'+s.sec+'秒');
+    startedOk=false;
     el.stat.textContent='源：'+(s.kind==='直链'?'直链（投屏全速）':'跳转地址（投屏会慢）');
     v.src=s.url; v.load();
     var p=v.play();
@@ -168,7 +169,7 @@
   }
 
   v.addEventListener('loadedmetadata',function(){ log('时长确认：'+Math.round(v.duration)+' 秒'); });
-  v.addEventListener('playing',function(){ log('开始播放'); });
+  v.addEventListener('playing',function(){ startedOk=true; log('开始播放'); });
   v.addEventListener('timeupdate',function(){
     var b=0; try{ if(v.buffered.length) b=v.buffered.end(v.buffered.length-1); }catch(e){}
     el.stat.textContent='进度 '+Math.round(v.currentTime)+'s / '+Math.round(v.duration||0)+'s　已缓冲 '+Math.round(b)+'s';
@@ -191,6 +192,7 @@
   });
   var retried=false;
   v.addEventListener('error',function(){
+    if(startedOk){ log('播放中断（已播起来过，不重试，避免重复触发投屏广告）','mid'); return; }
     log('✗ 加载出错','bad');
     if(retried) return;
     retried=true;
