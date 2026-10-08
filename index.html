@@ -415,6 +415,15 @@
     if(d && d.url) return { url: d.url, kind: '直链' };
     return { url: douyinPlayUrl(v.videoId, v.line || 0), kind: '跳转地址(慢)' };
   }
+  // 选中某一集：立刻把它的地址装进播放器（不自动播，等你点视频里的三角）
+  function prepareEpisode(v){
+    if(!v || !v.videoId) return;
+    var s = epSrc(v);
+    player.dataset.line = v.line || 0;
+    player.src = s.url;
+    player.load();
+  }
+
   // 页面内播放：能精确读到进度，投屏走直链照样全速且不会触发乐播广告
   function playEpisode(v){
     if(!v || !v.videoId) return;
@@ -490,6 +499,7 @@
       t.title = item.title || ('第'+item.number+'集');
       t.addEventListener('click', function(){
         state.currentVideoId = item.id;
+        prepareEpisode(item);
         renderVideos();
         var g = $('#videoList');
         if(g) g.scrollIntoView({behavior:'smooth', block:'nearest'});
