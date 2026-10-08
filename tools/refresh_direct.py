@@ -91,4 +91,18 @@ with open("direct.json", "w", encoding="utf-8") as f:
               f, ensure_ascii=False, indent=1)
 with open("episodes.json", "w", encoding="utf-8") as f:
     json.dump({"updated": now, "eps": episodes}, f, ensure_ascii=False, indent=1)
+
+# 刷新记录：保留最近 50 条，便于随时查看是否真的刷新过
+LOG = "refresh-log.json"
+hist = []
+try:
+    with open(LOG, encoding="utf-8") as f:
+        hist = (json.load(f) or {}).get("history") or []
+except Exception:
+    hist = []
+hist.append({"time": now, "count": len(eps_direct), "mixes": len(MIXES)})
+hist = hist[-50:]
+with open(LOG, "w", encoding="utf-8") as f:
+    json.dump({"updated": now, "history": hist}, f, ensure_ascii=False, indent=1)
+
 print("直链 %d 条 / 剧集 %d 集" % (len(eps_direct), len(episodes)))
