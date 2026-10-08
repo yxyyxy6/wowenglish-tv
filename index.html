@@ -930,13 +930,17 @@
         '<div style="font-size:14px;font-weight:600">'+escapeHtml(g.name)+'</div>'+
         '<div class="muted" style="font-size:12px">'+(g.eps||[]).length+' 集'+(names?' · '+escapeHtml(names):'')+'</div>'+
         '</div>'+
-        '<button class="btn btn-primary btn-sm" data-gplay="'+g.id+'" style="padding:7px 10px">▶连播</button>'+
+        '<button class="btn btn-primary btn-sm" data-gwatch="'+g.id+'" style="padding:7px 10px">▶真进度连播</button>'+
+        '<button class="btn btn-blue btn-sm" data-gplay="'+g.id+'" style="padding:7px 10px;background:var(--douyin);color:#fff">倒计时版</button>'+
         '<button class="btn btn-ghost btn-sm" data-gedit="'+g.id+'" style="padding:7px 8px">✎</button>'+
         '<button class="btn btn-ghost btn-sm" data-gdel="'+g.id+'" style="padding:7px 8px">✕</button>';
       box.appendChild(d);
     });
     box.querySelectorAll('[data-gplay]').forEach(function(b){
       b.addEventListener('click',function(){ location.href='play.html?g='+b.getAttribute('data-gplay'); });
+    });
+    box.querySelectorAll('[data-gwatch]').forEach(function(b){
+      b.addEventListener('click',function(){ location.href='watch.html?g='+b.getAttribute('data-gwatch'); });
     });
     box.querySelectorAll('[data-gedit]').forEach(function(b){
       b.addEventListener('click',function(){ openGroupModal(b.getAttribute('data-gedit')); });
