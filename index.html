@@ -110,7 +110,7 @@
 <div class="sub">iPhone 专属 · 抖音内联播放 + 阿里云盘视频源 · 家长手动操作</div>
 
 <!-- ============ 播放器 ============ -->
-<div class="card hide-mod" id="playerCard">
+<div class="card" id="playerCard">
   <div class="player-wrap" id="playerWrap">
     <video id="player" playsinline webkit-playsinline controls x-webkit-airplay="allow" preload="metadata"></video>
   </div>
@@ -227,7 +227,7 @@
         </div>
         <label class="switch"><input type="checkbox" id="logToggle"><span class="slider"></span></label>
       </div>
-      <div class="row" style="padding:12px;background:var(--card);border-radius:12px">
+      <div class="row hide-mod" style="padding:12px;background:var(--card);border-radius:12px">
         <div>
           <div style="font-size:14px;font-weight:600">一键熏听模式</div>
           <div class="muted" style="margin-top:2px">关画面·纯色静态背景·循环音频</div>
@@ -402,6 +402,37 @@
     return null;
   }
 
+  // ---- 直链：优先用自动刷新的直链（投屏全速），取不到才退回跳转地址 ----
+  var directMap = {};
+  function loadDirect(){
+    return fetch('direct.json?t=' + Date.now())
+      .then(function(r){ return r.json(); })
+      .then(function(j){ directMap = (j && j.eps) || {}; })
+      .catch(function(){});
+  }
+  function epSrc(v){
+    var d = directMap[v.videoId];
+    if(d && d.url) return { url: d.url, kind: '直链' };
+    return { url: douyinPlayUrl(v.videoId, v.line || 0), kind: '跳转地址(慢)' };
+  }
+  // 页面内播放：能精确读到进度，投屏走直链照样全速且不会触发乐播广告
+  function playEpisode(v){
+    if(!v || !v.videoId) return;
+    var s = epSrc(v);
+    player.dataset.line = v.line || 0;
+    player.src = s.url;
+    player.load();
+    var p = player.play();
+    if(p && p.then){
+      p.then(function(){ btnPlay.textContent = '⏸'; })
+       .catch(function(){ $('#airplayHint').textContent = '点▶按钮开始播放'; });
+    }
+    state.currentVideoId = v.id;
+    renderVideos();
+    try{ $('#playerCard').scrollIntoView({behavior:'smooth', block:'center'}); }catch(e){}
+    recordLog(v.title);
+  }
+
   // ---- 分季切换 ----
   var curSeason = 0;
   try{
@@ -487,22 +518,23 @@
       box.appendChild(panel);
     }
 
-    // 抖音源播放按钮：默认走原生播放器通道（全速）；关掉开关则回到页面内播放器
+    // 抖音源播放按钮：统一在页面内播放（直链全速，且不会触发乐播广告）
     box.querySelectorAll('[data-play]').forEach(function(b){
       b.addEventListener('click',function(){
         var id=b.getAttribute('data-play');
         var v=state.videos.find(function(x){return x.id===id;});
-        if(!v) return;
-        if(state.nativePlay) castDouyin(v); else playDouyin(v);
+        if(v) playEpisode(v);
       });
     });
 
-    // 抖音源投屏按钮
+    // 抖音源投屏按钮：也在页面内播（直链全速），并提示去视频控制条点 AirPlay
     box.querySelectorAll('[data-cast]').forEach(function(b){
       b.addEventListener('click',function(){
         var id=b.getAttribute('data-cast');
         var v=state.videos.find(function(x){return x.id===id;});
-        if(v) castDouyin(v);
+        if(!v) return;
+        playEpisode(v);
+        $('#airplayHint').textContent = '已开始播放 → 点视频控制条里的 AirPlay 图标投到电视';
       });
     });
 
