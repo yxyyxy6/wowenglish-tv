@@ -1,6 +1,246 @@
 {
- "updated": "2026-10-08T13:31:47Z",
+ "updated": "2026-10-08T13:42:48Z",
  "eps": [
+  {
+   "id": "s1-01",
+   "season": 1,
+   "number": "1",
+   "title": "Wow English 第一季 第1集",
+   "src": "douyin",
+   "videoId": "v0300fg10000d9c3l2nog65n045nskd0",
+   "awemeId": "7662939393959807667",
+   "sec": 235
+  },
+  {
+   "id": "s1-02",
+   "season": 1,
+   "number": "2",
+   "title": "Wow English 第一季 第2集",
+   "src": "douyin",
+   "videoId": "v0300fg10000d9c8javog65pc0jcll9g",
+   "awemeId": "7663026364018280358",
+   "sec": 105
+  },
+  {
+   "id": "s1-03",
+   "season": 1,
+   "number": "3",
+   "title": "Wow English 第一季 第3集",
+   "src": "douyin",
+   "videoId": "v0300fg10000d9cp3d7og65u0ea527ag",
+   "awemeId": "7663316593251237577",
+   "sec": 69
+  },
+  {
+   "id": "s1-04",
+   "season": 1,
+   "number": "4",
+   "title": "Wow English 第一季 第4集",
+   "src": "douyin",
+   "videoId": "v0300fg10000d9ddc1vog65vpq6iciq0",
+   "awemeId": "7663674244698353243",
+   "sec": 232
+  },
+  {
+   "id": "s1-05",
+   "season": 1,
+   "number": "5",
+   "title": "Wow English 第一季 第5集",
+   "src": "douyin",
+   "videoId": "v0300fg10000d9dglinog65mrejar5tg",
+   "awemeId": "7663731232136137971",
+   "sec": 152
+  },
+  {
+   "id": "s1-06",
+   "season": 1,
+   "number": "6",
+   "title": "Wow English 第一季 第6集",
+   "src": "douyin",
+   "videoId": "v0300fg10000d9e3j4vog65sa903cqug",
+   "awemeId": "7664064161891415386",
+   "sec": 285
+  },
+  {
+   "id": "s1-07",
+   "season": 1,
+   "number": "7",
+   "title": "Wow English 第一季 第7集",
+   "src": "douyin",
+   "videoId": "v0300fg10000d9e7d3vog65gpk1v76r0",
+   "awemeId": "7664131903804527323",
+   "sec": 90
+  },
+  {
+   "id": "s1-08",
+   "season": 1,
+   "number": "8",
+   "title": "Wow English 第一季 第8集",
+   "src": "douyin",
+   "videoId": "v0300fg10000d9epjfnog65h94cmkb40",
+   "awemeId": "7664451580029042826",
+   "sec": 291
+  },
+  {
+   "id": "s1-09",
+   "season": 1,
+   "number": "9",
+   "title": "Wow English 第一季 第9集",
+   "src": "douyin",
+   "videoId": "v0300fg10000d9eunj7og65ijkghb21g",
+   "awemeId": "7664541536172369318",
+   "sec": 90
+  },
+  {
+   "id": "s1-10",
+   "season": 1,
+   "number": "10",
+   "title": "Wow English 第一季 第10集",
+   "src": "douyin",
+   "videoId": "v0300fg10000d9ff74nog65noqv9lca0",
+   "awemeId": "7664831552119206310",
+   "sec": 233
+  },
+  {
+   "id": "s1-11",
+   "season": 1,
+   "number": "11",
+   "title": "Wow English 第一季 第11集",
+   "src": "douyin",
+   "videoId": "v0300fg10000d9fka5vog65sldu4rm3g",
+   "awemeId": "7664921187826531914",
+   "sec": 76
+  },
+  {
+   "id": "s1-12",
+   "season": 1,
+   "number": "12",
+   "title": "Wow English 第一季 第12集",
+   "src": "douyin",
+   "videoId": "v0300fg10000d9g4abnog65gtb6tiia0",
+   "awemeId": "7665202756705107187",
+   "sec": 306
+  },
+  {
+   "id": "s1-13",
+   "season": 1,
+   "number": "13",
+   "title": "Wow English 第一季 第13集",
+   "src": "douyin",
+   "videoId": "v0300fg10000d9g87tvog65kr9hh1ikg",
+   "awemeId": "7665271835953699017",
+   "sec": 76
+  },
+  {
+   "id": "s1-14",
+   "season": 1,
+   "number": "14",
+   "title": "Wow English 第一季 第14集",
+   "src": "douyin",
+   "videoId": "v0300fg10000d9gs78vog65opburhegg",
+   "awemeId": "7665623278309044937",
+   "sec": 269
+  },
+  {
+   "id": "s1-15",
+   "season": 1,
+   "number": "15",
+   "title": "Wow English 第一季 第15集",
+   "src": "douyin",
+   "videoId": "v0300fg10000d9h12kfog65t1v8754i0",
+   "awemeId": "7665708756483344457",
+   "sec": 93
+  },
+  {
+   "id": "s1-16",
+   "season": 1,
+   "number": "16",
+   "title": "Wow English 第一季 第16集",
+   "src": "douyin",
+   "videoId": "v0300fg10000d9hgvtvog65lmrttt2v0",
+   "awemeId": "7665988687507872678",
+   "sec": 253
+  },
+  {
+   "id": "s1-17",
+   "season": 1,
+   "number": "17",
+   "title": "Wow English 第一季 第17集",
+   "src": "douyin",
+   "videoId": "v0300fg10000d9hkcefog65ou58v59l0",
+   "awemeId": "7666048855128982766",
+   "sec": 93
+  },
+  {
+   "id": "s1-18",
+   "season": 1,
+   "number": "18",
+   "title": "Wow English 第一季 第18集",
+   "src": "douyin",
+   "videoId": "v0300fg10000d9i611fog65ocf5iu9f0",
+   "awemeId": "7666359024460074214",
+   "sec": 285
+  },
+  {
+   "id": "s1-19",
+   "season": 1,
+   "number": "19",
+   "title": "Wow English 第一季 第19集",
+   "src": "douyin",
+   "videoId": "v0300fg10000d9i8f4fog65qh4norp5g",
+   "awemeId": "7666401641582623194",
+   "sec": 155
+  },
+  {
+   "id": "s1-20",
+   "season": 1,
+   "number": "20",
+   "title": "Wow English 第一季 第20集",
+   "src": "douyin",
+   "videoId": "v0300fg10000d9iqenfog65sgg3ogemg",
+   "awemeId": "7666718048389198217",
+   "sec": 240
+  },
+  {
+   "id": "s1-21",
+   "season": 1,
+   "number": "21",
+   "title": "Wow English 第一季 第21集",
+   "src": "douyin",
+   "videoId": "v0300fg10000d9iua57og65skt3rjkk0",
+   "awemeId": "7666786056805516403",
+   "sec": 149
+  },
+  {
+   "id": "s1-22",
+   "season": 1,
+   "number": "22",
+   "title": "Wow English 第一季 第22集",
+   "src": "douyin",
+   "videoId": "v0300fg10000d9jfq5nog65uu3c76mi0",
+   "awemeId": "7667093964491630793",
+   "sec": 294
+  },
+  {
+   "id": "s1-23",
+   "season": 1,
+   "number": "23",
+   "title": "Wow English 第一季 第23集",
+   "src": "douyin",
+   "videoId": "v0300fg10000d9jig3vog65gmsie2b00",
+   "awemeId": "7667141244480655026",
+   "sec": 75
+  },
+  {
+   "id": "s1-24",
+   "season": 1,
+   "number": "24",
+   "title": "Wow English 第一季 第24集",
+   "src": "douyin",
+   "videoId": "v0300fg10000d9k5rt7og65riiurtdig",
+   "awemeId": "7667481753627965170",
+   "sec": 260
+  },
   {
    "id": "s1-25",
    "season": 1,
