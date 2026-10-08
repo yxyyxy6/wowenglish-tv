@@ -1172,9 +1172,12 @@
   });
 
   // ---- 初始化 ----
-  initPresetVideos();
-  renderVideos();
-  autoImportEpisodes();
+  // 先把直链拉到手，再渲染列表，这样点「播放/投屏」走的都是直链（全速）
+  loadDirect().then(function(){
+    initPresetVideos();
+    renderVideos();
+    autoImportEpisodes();
+  });
 })();
 </script>
 </body>
