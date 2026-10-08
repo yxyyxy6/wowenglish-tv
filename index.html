@@ -420,7 +420,13 @@
   })();
 
   // ---- 剧集列表 ----
-  function seasonOf(v){ return v.season || (String(v.id||'').indexOf('preset-')===0 ? 1 : 0); }
+  function seasonOf(v){
+    if(v.season) return v.season;
+    var m = String(v.id||'').match(/^s(\d+)-/);      // 新数据 id 形如 s1-01 / s2-01
+    if(m) return parseInt(m[1],10);
+    if(String(v.id||'').indexOf('preset-')===0) return 1; // 旧预设属第一季
+    return 0;
+  }
   function renderVideos(){
     var list = state.videos.slice();
     if(curSeason) list = list.filter(function(v){ return seasonOf(v)===curSeason; });
@@ -1051,18 +1057,32 @@
     fetch('episodes.json?t=' + Date.now()).then(function(r){ return r.json(); }).then(function(j){
       var list = (j && j.eps) || [];
       if(!list.length) return;
-      var have = {};
-      state.videos.forEach(function(v){ if(v.videoId) have[v.videoId] = 1; });
+      var have = {}, seasonByVid = {};
+      list.forEach(function(e){ if(e.videoId && e.season) seasonByVid[e.videoId] = e.season; });
+      state.videos.forEach(function(v){
+        if(v.videoId) have[v.videoId] = 1;
+        if(!v.season){
+          if(v.videoId && seasonByVid[v.videoId]) v.season = seasonByVid[v.videoId];
+          else{
+            var mm = String(v.id||'').match(/^s(\d+)-/);
+            if(mm) v.season = parseInt(mm[1],10);
+          }
+        }
+      });
       var added = 0;
       list.forEach(function(e){
         if(!e.videoId || have[e.videoId]) return;
         state.videos.push({
           id: e.id, number: e.number, title: e.title, src: 'douyin',
-          videoId: e.videoId, awemeId: e.awemeId, line: 0, sec: e.sec
+          videoId: e.videoId, awemeId: e.awemeId, line: 0, sec: e.sec, season: e.season
         });
         added++;
       });
-      if(added){
+      var dirty = added > 0 || list.some(function(e){
+        var v = state.videos.filter(function(x){return x.videoId===e.videoId;})[0];
+        return v && v.season && true;
+      });
+      if(added || true){
         ls.set('wow.videos', state.videos);
         renderVideos();
         var tip = document.createElement('div');
