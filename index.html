@@ -496,7 +496,6 @@
       });
       grid.appendChild(t);
     });
-    box.appendChild(grid);
 
     // 选中集的操作面板（按钮的 data-* 与原来的绑定代码一致）
     var cur = list.filter(function(x){return x.id===selId;})[0];
@@ -516,6 +515,7 @@
           escapeHtml(cur.title || ('第'+cur.number+'集'))+'</div>'+
         '<div style="display:flex;flex-wrap:wrap;gap:6px">'+actionBtn+'</div>';
       box.appendChild(panel);
+      box.appendChild(grid);
     }
 
     // 抖音源播放按钮：统一在页面内播放（直链全速，且不会触发乐播广告）
