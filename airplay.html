@@ -18,6 +18,9 @@
   select{background:#0f1115;color:#fff;border:1px solid #2a3038;border-radius:8px;padding:9px;font-size:15px;width:100%}
   video{width:100%;max-height:34vh;background:#000;border-radius:10px;display:block}
   .stat{font-size:13px;margin-top:8px;color:#ffd166}
+  .seg{display:flex;gap:6px}
+  .seg button{flex:1;margin:0;font-size:12px;padding:9px 4px;background:#2a3038}
+  .seg button.on{background:#3b82f6;font-weight:600}
   #log{background:#0b0d11;border:1px solid #23272f;border-radius:10px;padding:10px;font-size:12px;
        white-space:pre-wrap;max-height:220px;overflow:auto;color:#9ee6a0;margin-top:8px}
   .bad{color:#ff8f8f}.star{color:#ffd166;font-weight:700}
@@ -36,6 +39,11 @@
     <option value="027">第27集 · 10.6MB / 88秒</option>
     <option value="033">第33集 · 18.3MB / 90秒</option>
   </select>
+  <div class="muted" style="margin:10px 0 4px">地址方式（本次要验证的关键）</div>
+  <div class="seg" id="srcSeg">
+    <button data-s="jump" class="on">跳转地址（现在卡的）</button>
+    <button data-s="direct">直链（A方案）</button>
+  </div>
   <video id="v" playsinline webkit-playsinline controls preload="auto" x-webkit-airplay="allow"></video>
   <div class="stat" id="stat">未开始</div>
   <div style="margin-top:10px">
@@ -62,6 +70,7 @@
     <li>点「📡 投到电视」→ 选乐播/电视</li>
     <li>观察：电视有没有画面？手机上进度条还走不走？</li>
     <li>等播完，看日志有没有「★ 已播完」——<b>这条最关键</b></li>
+    <li style="color:#ffd166">再切到「<b>直链</b>」模式重做一遍 2–4 步，对比投屏速度（直链是有时限的，若失效告诉我，我重新取）</li>
   </ol>
 </div>
 
@@ -74,6 +83,7 @@
     '031':{v:'v0300fg10000d9ma2hvog65mgb2r5o60',l:0,sec:86},
     '033':{v:'v0300fg10000d9mubpfog65njagdv0dg',l:1,sec:90}
   };
+  var DIRECT = {"025": "https://v26-cold.douyinvod.com/b95fa04e2aecabc5dc79c68923f3e3d6/6ac79dce/video/tos/cn/tos-cn-ve-15/ok7PFG0GIAGt68gBwBfIG57RjQ77AhL7UQCVee/?a=1128&ch=54&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C3&cv=1&br=992&bt=992&cs=0&ds=3&ft=MgtpHQQqUnXfmoZmo0OW_QYaUqiXfOHc9VJEbWl7-vPD-Ipz&mime_type=video_mp4&qs=0&rc=aDtpOGk6ZDRoZTNmOWU4OkBpanl1PHY5cnc6PDMzNGkzM0AzXy0xXmAtX2MxMGIyXjI1YSM0cF80MmRrcmhhLS1kLTBzcw%3D%3D&btag=c0010e000af000&cquery=104q_103Q_103R_103S_100b&dy_q=1791463286&feature_id=f5241e7604dff1d9d6c943fd20bd51a2&l=202610082041262F44288611CA2D0D5D06", "027": "https://v5-coldy.douyinvod.com/231f44435a815e54f0b5ac2e01261a1d/6ac79dde/video/tos/cn/tos-cn-ve-15/o8IEgixQesjI1A9fpFGNVPnp1G5BABiJDx5Ajr/?a=1128&ch=54&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C3&cv=1&br=745&bt=745&cs=0&ds=3&ft=MgtpHQQqUnXfmoZmo0OW_QYaUqiXfOHc9VJEbWl7-vPD-Ipz&mime_type=video_mp4&qs=0&rc=OmU6OzhoMzo7NDw7NDU7NUBpMzlod2s5cjd5PDMzNGkzM0BiMF9fNDU1XjUxX2M2NjUyYSMwamBsMmRzYGhhLS1kLTBzcw%3D%3D&btag=c0010e000ad000&cquery=100b_104q_103Q_103R_103S&dy_q=1791463286&feature_id=f5241e7604dff1d9d6c943fd20bd51a2&l=202610082041262F44288611CA2D0D5D06", "031": "https://v26-cold.douyinvod.com/313ab5e0a489b14f2713d102346afebd/6ac79ddc/video/tos/cn/tos-cn-ve-15/okfWs4jAAQBiiygg23B4D1EYNIHCboeIliMAls/?a=1128&ch=54&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C3&cv=1&br=716&bt=716&cs=0&ds=3&ft=MgtpHQQqUnXfmoZmo0OW_QYaUqiXfOHc9VJEbWl7-vPD-Ipz&mime_type=video_mp4&qs=0&rc=Zzs5NzM7Njs5PDlnOmRmZkBpM3J1ZXA5cmtkPDMzNGkzM0AtMjJgY19fXl8xMy5jMjBfYSMzMi9kMmRzL2phLS1kLTBzcw%3D%3D&btag=c0010e000af000&cquery=103S_100b_104q_103Q_103R&dy_q=1791463286&feature_id=f5241e7604dff1d9d6c943fd20bd51a2&l=202610082041262F44288611CA2D0D5D06", "033": "https://v26-cold.douyinvod.com/65bec4d117e357fcf9a8012f5d750022/6ac79de0/video/tos/cn/tos-cn-ve-15/okeNetvQ8LQA2YjUAagI75oW08lgmuBGBM2CAf/?a=1128&ch=54&cr=3&dr=0&lr=all&cd=0%7C0%7C0%7C3&cv=1&br=1131&bt=1131&cs=0&ds=3&ft=MgtpHQQqUnXfmoZmo0OW_QYaUqiXfOHc9VJEbWl7-vPD-Ipz&mime_type=video_mp4&qs=0&rc=ZGg7O2Y4NmlmMzU6aTU6NkBpajNnZHE5cnN4PDMzNGkzM0AtY2FgYGFiNjAxYzUyLWA0YSNhc2RnMmRjX2phLS1kLTBzcw%3D%3D&btag=c0010e000af000&cquery=103R_103S_100b_104q_103Q&dy_q=1791463286&feature_id=f5241e7604dff1d9d6c943fd20bd51a2&l=202610082041262F44288611CA2D0D5D06"};
   var ORDER = ['025','027','031','033'];
   var v = document.getElementById('v');
   var elStat = document.getElementById('stat');
@@ -88,7 +98,9 @@
     elLog.appendChild(s); elLog.scrollTop = elLog.scrollHeight;
   }
   function cur(){ return document.getElementById('epSel').value; }
+  var srcMode = 'jump';
   function url(n){
+    if(srcMode === 'direct' && DIRECT[n]) return DIRECT[n];
     var e = EPS[n];
     return 'https://aweme.snssdk.com/aweme/v1/playwm/?video_id=' + e.v + '&ratio=540p&line=' + e.l;
   }
@@ -100,6 +112,17 @@
   }
 
   document.getElementById('epSel').addEventListener('change', function(){ load(cur()); });
+
+  Array.prototype.forEach.call(document.getElementById('srcSeg').querySelectorAll('button'), function(b){
+    b.addEventListener('click', function(){
+      srcMode = b.getAttribute('data-s');
+      Array.prototype.forEach.call(document.getElementById('srcSeg').querySelectorAll('button'), function(x){
+        x.className = (x.getAttribute('data-s') === srcMode) ? 'on' : '';
+      });
+      log('地址方式切换为：' + (srcMode === 'direct' ? '直链（A方案）' : '跳转地址'));
+      load(cur());
+    });
+  });
 
   document.getElementById('playBtn').addEventListener('click', function(){
     log('点了播放（用户手势内）');
