@@ -428,7 +428,10 @@
   function playEpisode(v){
     if(!v || !v.videoId) return;
     var s = epSrc(v);
+    currentPlayV = v;
     player.dataset.line = v.line || 0;
+    player.dataset.stage = '';      // 直链→跳转 的回退进度
+    player.dataset.tried = '';
     player.src = s.url;
     player.load();
     var p = player.play();
@@ -859,21 +862,37 @@
   });
   player.addEventListener('error',function(){
     btnPlay.textContent='▶';
-    // 线路自动回退：line=0 失败则试 line=1，反之亦然
     if(!currentPlayV){ $('#airplayHint').textContent='视频加载失败，重新点「播放」试试'; return; }
-    var cur = parseInt(player.dataset.line||'0',10);
-    var tried = player.dataset.tried||'';
-    if(tried.indexOf(String(cur))>=0){
-      // 两条线路都已尝试仍失败，确属链接失效
+    var jumpUrl = douyinPlayUrl(currentPlayV.videoId, currentPlayV.line||0);
+    // 已退回跳转地址还失败 → 确认失效
+    if(player.dataset.stage==='jump'){
       $('#airplayHint').textContent = '视频加载失败，链接可能已失效，请重新获取该集';
       return;
     }
-    player.dataset.tried = tried + cur;
-    var alt = cur===0?1:0;
-    player.dataset.line = alt;
-    $('#airplayHint').textContent = '正在切换线路重试…';
-    player.src = douyinPlayUrl(currentPlayV.videoId, alt);
-    player.load();
+    // 第一次失败：重取一次直链重试（仍失败就走跳转地址）
+    if(player.dataset.stage!=='direct1'){
+      player.dataset.stage='direct1';
+      $('#airplayHint').textContent = '直链似乎失效，正在自动重新获取…';
+      fetch('direct.json?t='+Date.now()).then(function(r){ return r.json(); }).then(function(j){
+        directMap = (j && j.eps) || {};
+        var d = directMap[currentPlayV.videoId];
+        player.src = (d && d.url) ? d.url : jumpUrl;
+        if(!(d && d.url)) $('#airplayHint').textContent = '没取到新直链，改用备用地址（投屏可能变慢）';
+        else $('#airplayHint').textContent = '已拿到新直链，重试播放';
+        player.load();
+        player.play().then(function(){btnPlay.textContent='⏸';}).catch(function(){});
+      }).catch(function(){
+        player.dataset.stage='jump';
+        $('#airplayHint').textContent = '重新获取失败，已改用备用地址';
+        player.src = jumpUrl; player.load();
+        player.play().then(function(){btnPlay.textContent='⏸';}).catch(function(){});
+      });
+      return;
+    }
+    // 直链重试也失败 → 退回跳转地址
+    player.dataset.stage='jump';
+    $('#airplayHint').textContent = '已改用备用地址（投屏可能变慢）';
+    player.src = jumpUrl; player.load();
     player.play().then(function(){btnPlay.textContent='⏸';}).catch(function(){});
   });
   player.addEventListener('loadedmetadata',function(){
