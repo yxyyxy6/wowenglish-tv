@@ -132,6 +132,9 @@
     <button data-s="2">第二季</button>
     <button data-s="0">全部</button>
   </div>
+  <div style="margin-bottom:8px">
+    <button class="btn btn-ghost btn-sm" id="syncBtn">🔄 同步剧集库</button>
+  </div>
   <div class="warn" style="margin-bottom:10px">
     <b style="color:var(--douyin)">投屏卡住就点「抖音」</b>：先连屏幕镜像 → 点「抖音」唤起抖音App播放 → App画面镜像到电视；「投屏」按钮作为备用
   </div>
@@ -1038,22 +1041,13 @@
   });
   renderGroups();
 
-  // ---- CDN 预热：首次任意点击后，触发各集播放链接 ----
-  // 目的：让抖音CDN边缘节点提前回源缓存，之后点「投屏」拉流更快
-  var preheated = false;
-  document.addEventListener('click', function(){
-    if(preheated) return;
-    preheated = true;
-    state.videos.forEach(function(v){
-      if(v.src==='douyin' && v.videoId){
-        var img = new Image();
-        img.src = douyinPlayUrl(v.videoId, v.line);
-      }
-    });
-  }, true);
+  // ---- CDN 预热：已停用 ----
+  // 原逻辑会为每一集都发一个请求，集数多（现在66集）时把页面拖垮。
+  // 现在走直链本来就快，不再需要预热。
+  var preheated = true;
 
   // ---- 自动入库：从 episodes.json 补进新剧集（只补缺的，不动你已有的和分组）----
-  function autoImportEpisodes(){
+  function autoImportEpisodes(quiet){
     fetch('episodes.json?t=' + Date.now()).then(function(r){ return r.json(); }).then(function(j){
       var list = (j && j.eps) || [];
       if(!list.length) return;
@@ -1071,17 +1065,31 @@
       if(added){
         ls.set('wow.videos', state.videos);
         renderVideos();
-        if(added >= 5){
-          var tip = document.createElement('div');
-          tip.className = 'warn';
-          tip.style.cssText = 'margin-bottom:10px';
-          tip.innerHTML = '🎉 已自动加入 <b>' + added + '</b> 集新剧集（来自 episodes.json）';
-          var card = $('#videoList').parentNode;
-          card.insertBefore(tip, $('#videoList'));
-        }
+        var tip = document.createElement('div');
+        tip.className = 'warn';
+        tip.style.cssText = 'margin-bottom:10px';
+        tip.innerHTML = '🎉 已加入 <b>' + added + '</b> 集新剧集';
+        var card = $('#videoList').parentNode;
+        card.insertBefore(tip, $('#videoList'));
+      }else if(!quiet){
+        var t2 = document.createElement('div');
+        t2.className = 'warn';
+        t2.style.cssText = 'margin-bottom:10px';
+        t2.innerHTML = '剧集库已是最新，没有新集需要加入';
+        var c2 = $('#videoList').parentNode;
+        c2.insertBefore(t2, $('#videoList'));
       }
-    }).catch(function(){});
+    }).catch(function(){
+      if(!quiet) alert('同步失败：读不到剧集清单，请稍后再试');
+    });
   }
+
+  var sb = $('#syncBtn');
+  if(sb) sb.addEventListener('click', function(){
+    sb.textContent = '同步中…';
+    autoImportEpisodes(false);
+    setTimeout(function(){ sb.textContent = '🔄 同步剧集库'; }, 2500);
+  });
 
   // ---- 初始化 ----
   initPresetVideos();
