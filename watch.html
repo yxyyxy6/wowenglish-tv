@@ -156,6 +156,7 @@
     if(!ep) return false;
     var s=srcFor(ep);
     log('播放 第'+ep.number+'集 · '+s.kind+' · 时长约'+s.sec+'秒');
+    el.stat.textContent='源：'+(s.kind==='直链'?'直链（投屏全速）':'跳转地址（投屏会慢）');
     v.src=s.url; v.load();
     var p=v.play();
     if(p&&p.catch) p.catch(function(e){
@@ -188,7 +189,29 @@
     }
     log('全部播完'); renderChips();
   });
-  v.addEventListener('error',function(){ log('✗ 加载出错（可能是直链过期，下一轮会自动刷新）','bad'); });
+  var retried=false;
+  v.addEventListener('error',function(){
+    log('✗ 加载出错','bad');
+    if(retried) return;
+    retried=true;
+    log('尝试重新获取直链并重试一次…','mid');
+    fetch('direct.json?t='+Date.now()).then(function(r){return r.json();}).then(function(j){
+      direct=(j&&j.eps)||{};
+      var eps=groupEps(group), ep=eps[idx];
+      if(!ep) return;
+      var d=direct[ep.videoId];
+      if(d&&d.url){
+        log('拿到新直链，重试播放');
+        v.src=d.url; v.load();
+        var p=v.play(); if(p&&p.catch) p.catch(function(){});
+      }else{
+        log('没取到直链，改用跳转地址（投屏会慢）','mid');
+        v.src='https://aweme.snssdk.com/aweme/v1/playwm/?video_id='+ep.videoId+'&ratio=540p&line='+(ep.line||0);
+        v.load();
+        var p2=v.play(); if(p2&&p2.catch) p2.catch(function(){});
+      }
+    }).catch(function(){ log('重新取直链失败','bad'); });
+  });
 
   document.getElementById('startBtn').addEventListener('click',function(){
     if(!group){ log('请先回工作台建分组','mid'); return; }
