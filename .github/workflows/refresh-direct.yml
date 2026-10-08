@@ -1,7 +1,7 @@
 name: refresh-direct
 on:
   schedule:
-    - cron: "17 * * * *"      # 每小时自动刷新一次直链
+    - cron: "7,37 * * * *"    # 每 30 分钟自动刷新一次直链，缩短过期窗口
   workflow_dispatch:          # 也支持手动点一次
 permissions:
   contents: write
