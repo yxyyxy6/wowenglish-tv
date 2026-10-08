@@ -404,12 +404,51 @@
 
   // ---- 直链：优先用自动刷新的直链（投屏全速），取不到才退回跳转地址 ----
   var directMap = {};
-  function loadDirect(){
-    return fetch('direct.json?t=' + Date.now())
-      .then(function(r){ return r.json(); })
-      .then(function(j){ directMap = (j && j.eps) || {}; })
-      .catch(function(){});
+  var directTime = 0;
+  var healing = false;
+  // 实时解析：页面需要播放时，临时去抖音要一次「当下最新」的直链
+  var PROXIES = [
+    function(u){ return 'https://api.allorigins.win/get?url=' + encodeURIComponent(u); },
+    function(u){ return 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u); }
+  ];
+  function resolveDirect(){
+    var api = 'https://www.iesdouyin.com/aweme/v1/mix/aweme/?mix_id=7669019617909540899&aid=1128&count=30&cursor=20&device_platform=webapp';
+    var i = 0;
+    function attempt(){
+      if(i >= PROXIES.length) return Promise.reject(new Error('代理不可用'));
+      var url = PROXIES[i++](api);
+      return fetch(url, {cache:'no-store'}).then(function(r){
+        if(!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      }).then(function(w){
+        var raw = (w && typeof w.contents === 'string') ? w.contents : (typeof w === 'string' ? w : null);
+        if(!raw) throw new Error('无内容');
+        return JSON.parse(raw);
+      }).then(function(d){
+        var m = {};
+        (d.aweme_list || []).forEach(function(a){
+          var v = a.video || {}, pa = v.play_addr || {};
+          if(pa.uri && (pa.url_list || []).length){
+            m[pa.uri] = {
+              url: pa.url_list[0],
+              sec: Math.round((a.duration || 0) / 1000),
+              season: 2
+            };
+          }
+        });
+        if(!Object.keys(m).length) throw new Error('解析为空');
+        directMap = m;
+        directTime = Date.now();
+        try{
+          localStorage.setItem('wow.directCache', JSON.stringify(m));
+          localStorage.setItem('wow.directCacheTime', String(directTime));
+        }catch(e){}
+        return m;
+      }).catch(attempt);
+    }
+    return attempt();
   }
+  function hint(t){ $('#airplayHint').textContent = t; }
   function epSrc(v){
     var d = directMap[v.videoId];
     if(d && d.url) return { url: d.url, kind: '直链' };
@@ -1195,18 +1234,35 @@
 
   var sb = $('#syncBtn');
   if(sb) sb.addEventListener('click', function(){
-    sb.textContent = '同步中…';
-    autoImportEpisodes(false);
-    setTimeout(function(){ sb.textContent = '🔄 同步剧集库'; }, 2500);
+    sb.textContent = '刷新中…';
+    resolveDirect().then(function(){
+      initPresetVideos(); renderVideos(); autoImportEpisodes(false);
+      sb.textContent = '🔄 同步剧集库';
+      hint('✅ 直链已更新（' + new Date().toTimeString().slice(0,8) + '）');
+    }).catch(function(){
+      sb.textContent = '🔄 同步剧集库';
+      hint('刷新失败，请稍后再试');
+    });
   });
 
   // ---- 初始化 ----
   // 先把直链拉到手，再渲染列表，这样点「播放/投屏」走的都是直链（全速）
-  loadDirect().then(function(){
+  try{
+    var cc = localStorage.getItem('wow.directCache');
+    if(cc) directMap = JSON.parse(cc) || {};
+    directTime = parseInt(localStorage.getItem('wow.directCacheTime')||'0',10);
+  }catch(e){}
+  resolveDirect().then(function(){
+    initPresetVideos();
+    renderVideos();
+    autoImportEpisodes();
+  }).catch(function(){
     initPresetVideos();
     renderVideos();
     autoImportEpisodes();
   });
+  // 每 20 分钟后台换新一次，保证打开就能播
+  setInterval(function(){ resolveDirect().then(renderVideos); }, 20*60*1000);
 })();
 </script>
 </body>
