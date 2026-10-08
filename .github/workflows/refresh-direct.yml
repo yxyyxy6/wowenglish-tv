@@ -21,7 +21,7 @@ jobs:
         run: |
           git config user.name "wow-bot"
           git config user.email "bot@local"
-          git add direct.json
+          git add direct.json episodes.json refresh-log.json
           if git diff --cached --quiet; then
             echo "直链无变化，跳过提交"
           else
