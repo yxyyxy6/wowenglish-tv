@@ -52,6 +52,11 @@
   .vtag.dy{color:var(--douyin);}
   .seg{display:flex;gap:6px}
   .seg button{flex:1;margin:0;font-size:13px;padding:9px 4px}
+  .epgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(54px,1fr));gap:8px}
+  .eptile{padding:11px 0;border:0;border-radius:10px;background:rgba(255,255,255,.07);color:#e8e8ea;
+          font-size:14px;font-weight:600;cursor:pointer}
+  .eptile.on{background:var(--accent);color:#1a1a1a}
+  .eppanel{margin-top:12px;padding:12px;background:var(--card);border-radius:12px;border:1px solid var(--line)}
   .seg button.on{background:var(--accent);color:#1a1a1a;font-weight:600}
   .empty{text-align:center;padding:26px 10px;color:var(--sub);}
   .empty .ic{font-size:34px;display:block;margin-bottom:6px;}
@@ -430,34 +435,56 @@
   function renderVideos(){
     var list = state.videos.slice();
     if(curSeason) list = list.filter(function(v){ return seasonOf(v)===curSeason; });
-    list.sort(function(a,b){return a.number<b.number?-1:(a.number>b.number?1:0);});
+    list.sort(function(a,b){
+      var sa = seasonOf(a), sb = seasonOf(b);
+      if(sa !== sb) return sa - sb;                       // 先按季
+      return (parseInt(a.number,10)||0) - (parseInt(b.number,10)||0);  // 再按集数（数字，不是字符串）
+    });
     var box = $('#videoList'), empty=$('#videoEmpty');
     box.innerHTML='';
     if(list.length===0){empty.classList.remove('hidden');return;}
     empty.classList.add('hidden');
+    // 选中的那一集（默认第一集）
+    var selId = state.currentVideoId;
+    if(!selId || !list.some(function(x){return x.id===selId;})) selId = list[0] && list[0].id;
+
+    // 集数宫格：一屏放得下几十集，不用长距离翻
+    var grid = document.createElement('div');
+    grid.className = 'epgrid';
     list.forEach(function(item){
-      var isDouyin = item.src==='douyin';
-      var d = document.createElement('div');
-      d.className='vitem'+(state.currentVideoId===item.id?' playing':'');
-      var badgeClass = isDouyin?'src-badge dy':'src-badge cloud';
-      var badgeText = isDouyin?'抖音':'云盘';
-      var numClass = isDouyin?'vnum dy':'vnum';
-      var actionBtn = isDouyin
-        ? '<button class="btn btn-primary btn-sm" data-play="'+item.id+'" style="padding:7px 10px">播放</button>'+
-          '<button class="btn btn-blue btn-sm" data-cast="'+item.id+'" style="padding:7px 10px;background:var(--douyin);color:#fff">投屏</button>'+
-          '<button class="btn btn-ghost btn-sm" data-listen="'+item.id+'" title="熏听" style="padding:7px 8px">👂</button>'+
-          '<button class="btn btn-ghost btn-sm" data-app="'+item.id+'" style="padding:7px 10px">抖音</button>'
-        : '<a class="btn btn-blue btn-sm" href="'+escapeHtml(item.link)+'" target="_blank" rel="noopener" data-id="'+item.id+'" style="padding:7px 12px;text-decoration:none">打开</a>';
-      d.innerHTML = '<div class="'+numClass+'">'+escapeHtml(item.number)+'</div>'+
-        '<div style="flex:1;min-width:0">'+
-          '<div class="vname">'+escapeHtml(item.title)+'</div>'+
-          '<div style="display:flex;align-items:center;gap:6px"><span class="'+badgeClass+'">'+badgeText+'</span>'+
-          '<span class="vtag'+(isDouyin?' dy':'')+'">'+(isDouyin?'手机看 · 投屏':'跳转云盘')+'</span></div>'+
-        '</div>'+
-        actionBtn+
-        '<button class="btn btn-ghost btn-sm" data-del="'+item.id+'" style="padding:7px 10px">删</button>';
-      box.appendChild(d);
+      var t = document.createElement('button');
+      t.className = 'eptile' + (selId===item.id ? ' on' : '');
+      t.textContent = item.number;
+      t.title = item.title || ('第'+item.number+'集');
+      t.addEventListener('click', function(){
+        state.currentVideoId = item.id;
+        renderVideos();
+        var g = $('#videoList');
+        if(g) g.scrollIntoView({behavior:'smooth', block:'nearest'});
+      });
+      grid.appendChild(t);
     });
+    box.appendChild(grid);
+
+    // 选中集的操作面板（按钮的 data-* 与原来的绑定代码一致）
+    var cur = list.filter(function(x){return x.id===selId;})[0];
+    if(cur){
+      var isDouyin = cur.src==='douyin';
+      var actionBtn = isDouyin
+        ? '<button class="btn btn-primary btn-sm" data-play="'+cur.id+'" style="padding:9px 12px">▶ 播放</button>'+
+          '<button class="btn btn-blue btn-sm" data-cast="'+cur.id+'" style="padding:9px 12px;background:var(--douyin);color:#fff">📺 投屏</button>'+
+          '<button class="btn btn-ghost btn-sm" data-listen="'+cur.id+'" style="padding:9px 10px">👂 熏听</button>'+
+          '<button class="btn btn-ghost btn-sm" data-app="'+cur.id+'" style="padding:9px 12px">抖音</button>'+
+          '<button class="btn btn-ghost btn-sm" data-del="'+cur.id+'" style="padding:9px 10px">删</button>'
+        : '<a class="btn btn-blue btn-sm" href="'+escapeHtml(cur.link)+'" target="_blank" rel="noopener" data-id="'+cur.id+'" style="padding:9px 14px;text-decoration:none">打开</a>'+
+          '<button class="btn btn-ghost btn-sm" data-del="'+cur.id+'" style="padding:9px 10px">删</button>';
+      var panel = document.createElement('div');
+      panel.className = 'eppanel';
+      panel.innerHTML = '<div style="font-size:13px;font-weight:600;margin-bottom:8px">'+
+          escapeHtml(cur.title || ('第'+cur.number+'集'))+'</div>'+
+        '<div style="display:flex;flex-wrap:wrap;gap:6px">'+actionBtn+'</div>';
+      box.appendChild(panel);
+    }
 
     // 抖音源播放按钮：默认走原生播放器通道（全速）；关掉开关则回到页面内播放器
     box.querySelectorAll('[data-play]').forEach(function(b){
