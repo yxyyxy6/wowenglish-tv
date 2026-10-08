@@ -6,7 +6,7 @@
 import json, os, ssl, sys, datetime, urllib.request
 
 DEFAULT_MIXES = [
-    {"id": "7669019617909540899", "season": 1, "include": [[25, 33]]},
+    {"id": "7669019617909540899", "season": 1},
     {"id": "7670150022856214564", "season": 2}
 ]
 MIXES = json.loads(os.environ.get("MIX_IDS", "null")) or DEFAULT_MIXES
