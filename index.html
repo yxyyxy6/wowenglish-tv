@@ -1013,9 +1013,41 @@
     });
   }, true);
 
+  // ---- 自动入库：从 episodes.json 补进新剧集（只补缺的，不动你已有的和分组）----
+  function autoImportEpisodes(){
+    fetch('episodes.json?t=' + Date.now()).then(function(r){ return r.json(); }).then(function(j){
+      var list = (j && j.eps) || [];
+      if(!list.length) return;
+      var have = {};
+      state.videos.forEach(function(v){ if(v.videoId) have[v.videoId] = 1; });
+      var added = 0;
+      list.forEach(function(e){
+        if(!e.videoId || have[e.videoId]) return;
+        state.videos.push({
+          id: e.id, number: e.number, title: e.title, src: 'douyin',
+          videoId: e.videoId, awemeId: e.awemeId, line: 0, sec: e.sec
+        });
+        added++;
+      });
+      if(added){
+        ls.set('wow.videos', state.videos);
+        renderVideos();
+        if(added >= 5){
+          var tip = document.createElement('div');
+          tip.className = 'warn';
+          tip.style.cssText = 'margin-bottom:10px';
+          tip.innerHTML = '🎉 已自动加入 <b>' + added + '</b> 集新剧集（来自 episodes.json）';
+          var card = $('#videoList').parentNode;
+          card.insertBefore(tip, $('#videoList'));
+        }
+      }
+    }).catch(function(){});
+  }
+
   // ---- 初始化 ----
   initPresetVideos();
   renderVideos();
+  autoImportEpisodes();
 })();
 </script>
 </body>
