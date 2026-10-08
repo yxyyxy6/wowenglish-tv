@@ -58,6 +58,7 @@
   .eptile.on{background:var(--accent);color:#1a1a1a}
   .eppanel{margin-top:12px;padding:12px;background:var(--card);border-radius:12px;border:1px solid var(--line)}
   .seg button.on{background:var(--accent);color:#1a1a1a;font-weight:600}
+  .hide-mod{display:none}
   .empty{text-align:center;padding:26px 10px;color:var(--sub);}
   .empty .ic{font-size:34px;display:block;margin-bottom:6px;}
   .steps{counter-reset:s;list-style:none;padding:0;margin:0;}
@@ -109,7 +110,7 @@
 <div class="sub">iPhone 专属 · 抖音内联播放 + 阿里云盘视频源 · 家长手动操作</div>
 
 <!-- ============ 播放器 ============ -->
-<div class="card" id="playerCard">
+<div class="card hide-mod" id="playerCard">
   <div class="player-wrap" id="playerWrap">
     <video id="player" playsinline webkit-playsinline controls x-webkit-airplay="allow" preload="metadata"></video>
   </div>
@@ -169,7 +170,7 @@
 </div>
 
 <!-- ============ 阿里云盘分享入口 ============ -->
-<div class="card">
+<div class="card hide-mod">
   <h2><span class="ic">🔗</span>阿里云盘文件夹</h2>
   <div class="muted" style="margin-bottom:6px">永久公开分享文件夹：<b style="color:var(--txt)">Wow English</b></div>
   <div class="link" style="margin-bottom:10px">https://www.alipan.com/s/PF3MHZBSsyt</div>
@@ -180,7 +181,7 @@
 </div>
 
 <!-- ============ 投屏指引 ============ -->
-<div class="card">
+<div class="card hide-mod">
   <h2><span class="ic">📋</span>投屏步骤（必读！）</h2>
   <div class="warn" style="margin-bottom:10px">
     <b>⚠ 投电视卡住（几十KB）？请用「抖音」按钮</b><br>
@@ -199,7 +200,7 @@
 </div>
 
 <!-- ============ 加载失败排查 ============ -->
-<div class="card">
+<div class="card hide-mod">
   <h2><span class="ic">🔧</span>加载失败排查</h2>
   <ul class="steps">
     <li><b>抖音视频不播放</b>：抖音CDN链接约1小时过期，重新点「播放」会自动刷新</li>
