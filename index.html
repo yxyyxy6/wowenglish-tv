@@ -50,6 +50,9 @@
   .vname{font-size:14px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .vtag{font-size:10px;color:var(--sub);}
   .vtag.dy{color:var(--douyin);}
+  .seg{display:flex;gap:6px}
+  .seg button{flex:1;margin:0;font-size:13px;padding:9px 4px}
+  .seg button.on{background:var(--accent);color:#1a1a1a;font-weight:600}
   .empty{text-align:center;padding:26px 10px;color:var(--sub);}
   .empty .ic{font-size:34px;display:block;margin-bottom:6px;}
   .steps{counter-reset:s;list-style:none;padding:0;margin:0;}
@@ -123,6 +126,11 @@
   <div class="row" style="margin-bottom:10px">
     <h2 style="margin:0"><span class="ic">📁</span>剧集列表</h2>
     <button class="btn btn-ghost btn-sm" id="addBtn">+ 添加</button>
+  </div>
+  <div class="seg" id="seasonSeg" style="margin-bottom:10px">
+    <button data-s="1">第一季</button>
+    <button data-s="2">第二季</button>
+    <button data-s="0">全部</button>
   </div>
   <div class="warn" style="margin-bottom:10px">
     <b style="color:var(--douyin)">投屏卡住就点「抖音」</b>：先连屏幕镜像 → 点「抖音」唤起抖音App播放 → App画面镜像到电视；「投屏」按钮作为备用
@@ -385,9 +393,35 @@
     return null;
   }
 
+  // ---- 分季切换 ----
+  var curSeason = 0;
+  try{
+    var q = (location.search||'').match(/[?&]s=(\d)/);
+    curSeason = q ? parseInt(q[1],10) : (parseInt(localStorage.getItem('wow.season'),10) || 0);
+  }catch(e){}
+  (function initSeason(){
+    var seg = $('#seasonSeg');
+    if(!seg) return;
+    Array.prototype.forEach.call(seg.querySelectorAll('button'), function(b){
+      var s = parseInt(b.getAttribute('data-s'),10);
+      b.className = (s===curSeason) ? 'on' : '';
+      b.addEventListener('click', function(){
+        curSeason = s;
+        try{ localStorage.setItem('wow.season', String(s)); }catch(e){}
+        Array.prototype.forEach.call(seg.querySelectorAll('button'), function(x){
+          x.className = (parseInt(x.getAttribute('data-s'),10)===curSeason) ? 'on' : '';
+        });
+        renderVideos(); renderGroups();
+      });
+    });
+  })();
+
   // ---- 剧集列表 ----
+  function seasonOf(v){ return v.season || (String(v.id||'').indexOf('preset-')===0 ? 1 : 0); }
   function renderVideos(){
-    var list = state.videos.slice().sort(function(a,b){return a.number<b.number?-1:(a.number>b.number?1:0);});
+    var list = state.videos.slice();
+    if(curSeason) list = list.filter(function(v){ return seasonOf(v)===curSeason; });
+    list.sort(function(a,b){return a.number<b.number?-1:(a.number>b.number?1:0);});
     var box = $('#videoList'), empty=$('#videoEmpty');
     box.innerHTML='';
     if(list.length===0){empty.classList.remove('hidden');return;}
@@ -885,19 +919,19 @@
   // awemeId 用于「抖音」按钮唤起抖音App播放（热CDN流畅）
   // videoId+line 用于「投屏」按钮 playwm 直链（540p 全部实测可用）
   var PRESET_VIDEOS = [
-    {id:'preset-025',number:'025',title:'Wow English 第一季 第25集',src:'douyin',videoId:'v0300fg10000d9k7utnog65s79brsv7g',awemeId:'7667518725550351027',sec:72,line:0},
-    {id:'preset-026',number:'026',title:'Wow English 第一季 第26集',src:'douyin',videoId:'v0300fg10000d9kudfnog65rlkr8br8g',awemeId:'7667913900272311241',sec:213,line:0},
-    {id:'preset-027',number:'027',title:'Wow English 第一季 第27集',src:'douyin',videoId:'v0300fg10000d9kvc4vog65hotcem630',awemeId:'7667930672997376242',sec:88,line:0},
-    {id:'preset-028',number:'028',title:'Wow English 第一季 第28集',src:'douyin',videoId:'v0300fg10000d9lhbefog65ofmnek4k0',awemeId:'7668247045325193970',sec:287,line:0},
-    {id:'preset-029',number:'029',title:'Wow English 第一季 第29集',src:'douyin',videoId:'v0300fg10000da60lvfog65n66njripg',awemeId:'7677523915455940462',sec:91,line:1},
-    {id:'preset-030',number:'030',title:'Wow English 第一季 第30集',src:'douyin',videoId:'v0300fg10000d9m9h5vog65vlupu1g00',awemeId:'7668672296483074483',sec:314,line:0},
-    {id:'preset-031',number:'031',title:'Wow English 第一季 第31集',src:'douyin',videoId:'v0300fg10000d9ma2hvog65mgb2r5o60',awemeId:'7668681823535119790',sec:86,line:0},
-    {id:'preset-032',number:'032',title:'Wow English 第一季 第32集',src:'douyin',videoId:'v0300fg10000d9mt49vog65qfmrlnqg0',awemeId:'7669017093072811465',sec:273,line:0},
-    {id:'preset-033',number:'033',title:'Wow English 第一季 第33集',src:'douyin',videoId:'v0300fg10000d9mubpfog65njagdv0dg',awemeId:'7669038732012484078',sec:90,line:1}
+    {id:'preset-025',number:'025',title:'Wow English 第一季 第25集',src:'douyin',season:1,videoId:'v0300fg10000d9k7utnog65s79brsv7g',awemeId:'7667518725550351027',sec:72,line:0},
+    {id:'preset-026',number:'026',title:'Wow English 第一季 第26集',src:'douyin',season:1,videoId:'v0300fg10000d9kudfnog65rlkr8br8g',awemeId:'7667913900272311241',sec:213,line:0},
+    {id:'preset-027',number:'027',title:'Wow English 第一季 第27集',src:'douyin',season:1,videoId:'v0300fg10000d9kvc4vog65hotcem630',awemeId:'7667930672997376242',sec:88,line:0},
+    {id:'preset-028',number:'028',title:'Wow English 第一季 第28集',src:'douyin',season:1,videoId:'v0300fg10000d9lhbefog65ofmnek4k0',awemeId:'7668247045325193970',sec:287,line:0},
+    {id:'preset-029',number:'029',title:'Wow English 第一季 第29集',src:'douyin',season:1,videoId:'v0300fg10000da60lvfog65n66njripg',awemeId:'7677523915455940462',sec:91,line:1},
+    {id:'preset-030',number:'030',title:'Wow English 第一季 第30集',src:'douyin',season:1,videoId:'v0300fg10000d9m9h5vog65vlupu1g00',awemeId:'7668672296483074483',sec:314,line:0},
+    {id:'preset-031',number:'031',title:'Wow English 第一季 第31集',src:'douyin',season:1,videoId:'v0300fg10000d9ma2hvog65mgb2r5o60',awemeId:'7668681823535119790',sec:86,line:0},
+    {id:'preset-032',number:'032',title:'Wow English 第一季 第32集',src:'douyin',season:1,videoId:'v0300fg10000d9mt49vog65qfmrlnqg0',awemeId:'7669017093072811465',sec:273,line:0},
+    {id:'preset-033',number:'033',title:'Wow English 第一季 第33集',src:'douyin',season:1,videoId:'v0300fg10000d9mubpfog65njagdv0dg',awemeId:'7669038732012484078',sec:90,line:1}
   ];
   function initPresetVideos(){
     // 预设版本号：版本变化时用新预设替换旧预设（保留用户自定义的云盘等非预设视频）
-    var PRESET_VER = 3;
+    var PRESET_VER = 4;
     var savedVer = ls.get('wow.presetVer', 0);
     if(savedVer !== PRESET_VER){
       // 清掉旧的 preset-* 预设，换上新预设（旧33集 → 新25-33集）
@@ -914,8 +948,13 @@
 
   function renderGroups(){
     var box = $('#groupList'), empty = $('#groupEmpty');
-    var gs = state.groups || [];
-    if(gs.length===0){ box.innerHTML=''; empty.classList.remove('hidden'); return; }
+    var gs = (state.groups || []).filter(function(g){
+      if(!curSeason) return true;
+      var eps = (g.eps||[]).map(function(id){ return state.videos.filter(function(x){return x.id===id;})[0]; }).filter(Boolean);
+      if(!eps.length) return true;
+      return eps.some(function(v){ return seasonOf(v)===curSeason; });
+    });
+    if((state.groups||[]).length===0){ box.innerHTML=''; empty.classList.remove('hidden'); return; }
     empty.classList.add('hidden');
     box.innerHTML='';
     gs.forEach(function(g){
