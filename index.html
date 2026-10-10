@@ -449,8 +449,29 @@
     return attempt();
   }
   function hint(t){ $('#airplayHint').textContent = t; }
+
+  // ---- 同源备用：直接读仓库里的 direct.json（不依赖任何第三方代理）----
+  // 定时任务会把最新直链写进这个文件，所以它是一条稳定通道
+  var fileMap = {}, fileTime = 0;
+  function loadDirectFile(){
+    return fetch('direct.json?t=' + Date.now(), {cache:'no-store'})
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        fileMap = (j && j.eps) || {};
+        fileTime = Date.parse(j.updated || '') || 0;
+        return fileMap;
+      })
+      .catch(function(){});
+  }
+  // 取「时间更新」的那份：实时解析的 vs 定时任务写进文件的
+  function bestMap(){
+    var hasD = Object.keys(directMap).length > 0;
+    var hasF = Object.keys(fileMap).length > 0;
+    if(hasD && (!hasF || directTime >= fileTime)) return directMap;
+    return fileMap;
+  }
   function epSrc(v){
-    var d = directMap[v.videoId];
+    var d = bestMap()[v.videoId];
     if(d && d.url) return { url: d.url, kind: '直链' };
     return { url: douyinPlayUrl(v.videoId, v.line || 0), kind: '跳转地址(慢)' };
   }
@@ -901,38 +922,31 @@
   });
   player.addEventListener('error',function(){
     btnPlay.textContent='▶';
-    if(!currentPlayV){ $('#airplayHint').textContent='视频加载失败，重新点「播放」试试'; return; }
-    var jumpUrl = douyinPlayUrl(currentPlayV.videoId, currentPlayV.line||0);
-    // 已退回跳转地址还失败 → 确认失效
-    if(player.dataset.stage==='jump'){
-      $('#airplayHint').textContent = '视频加载失败，链接可能已失效，请重新获取该集';
-      return;
-    }
-    // 第一次失败：重取一次直链重试（仍失败就走跳转地址）
-    if(player.dataset.stage!=='direct1'){
-      player.dataset.stage='direct1';
-      $('#airplayHint').textContent = '直链似乎失效，正在自动重新获取…';
-      fetch('direct.json?t='+Date.now()).then(function(r){ return r.json(); }).then(function(j){
-        directMap = (j && j.eps) || {};
-        var d = directMap[currentPlayV.videoId];
-        player.src = (d && d.url) ? d.url : jumpUrl;
-        if(!(d && d.url)) $('#airplayHint').textContent = '没取到新直链，改用备用地址（投屏可能变慢）';
-        else $('#airplayHint').textContent = '已拿到新直链，重试播放';
-        player.load();
-        player.play().then(function(){btnPlay.textContent='⏸';}).catch(function(){});
-      }).catch(function(){
-        player.dataset.stage='jump';
-        $('#airplayHint').textContent = '重新获取失败，已改用备用地址';
-        player.src = jumpUrl; player.load();
-        player.play().then(function(){btnPlay.textContent='⏸';}).catch(function(){});
-      });
-      return;
-    }
-    // 直链重试也失败 → 退回跳转地址
-    player.dataset.stage='jump';
-    $('#airplayHint').textContent = '已改用备用地址（投屏可能变慢）';
-    player.src = jumpUrl; player.load();
-    player.play().then(function(){btnPlay.textContent='⏸';}).catch(function(){});
+    if(!currentPlayV){ hint('视频加载失败，重新点「播放」试试'); return; }
+    if(healing) return;
+    healing = true;
+    hint('直链失效，正在自动换新…');
+    // 两条通道都重载：仓库文件(稳定) + 实时解析(可能受代理影响)，取时间最新的那份
+    Promise.all([
+      loadDirectFile().catch(function(){}),
+      resolveDirect().catch(function(){})
+    ]).then(function(){
+      var d = bestMap()[currentPlayV.videoId];
+      if(d && d.url){
+        player.src = d.url;
+        hint('已换新直链，重试播放');
+      }else{
+        player.src = douyinPlayUrl(currentPlayV.videoId, currentPlayV.line || 0);
+        hint('没取到直链，改用备用地址（手机能播，投屏会慢）');
+      }
+      player.load();
+      return player.play();
+    }).then(function(){
+      healing = false; btnPlay.textContent='⏸';
+    }).catch(function(){
+      healing = false;
+      hint('自动换新失败：请点「🔄 同步剧集库」，或稍后再试');
+    });
   });
   player.addEventListener('loadedmetadata',function(){
     $('#airplayHint').textContent = '✅ 视频已加载，点 📡 按钮投屏到电视';
@@ -1235,13 +1249,15 @@
   var sb = $('#syncBtn');
   if(sb) sb.addEventListener('click', function(){
     sb.textContent = '刷新中…';
-    resolveDirect().then(function(){
+    Promise.all([
+      resolveDirect().catch(function(){}),
+      loadDirectFile().catch(function(){})
+    ]).then(function(){
       initPresetVideos(); renderVideos(); autoImportEpisodes(false);
       sb.textContent = '🔄 同步剧集库';
-      hint('✅ 直链已更新（' + new Date().toTimeString().slice(0,8) + '）');
-    }).catch(function(){
-      sb.textContent = '🔄 同步剧集库';
-      hint('刷新失败，请稍后再试');
+      var src = (Object.keys(directMap).length && (!Object.keys(fileMap).length || directTime >= fileTime))
+                ? '实时解析' : '备用数据文件';
+      hint('✅ 已刷新（来源：' + src + '）');
     });
   });
 
@@ -1252,7 +1268,10 @@
     if(cc) directMap = JSON.parse(cc) || {};
     directTime = parseInt(localStorage.getItem('wow.directCacheTime')||'0',10);
   }catch(e){}
-  resolveDirect().then(function(){
+  Promise.all([
+    loadDirectFile().catch(function(){}),
+    resolveDirect().catch(function(){})
+  ]).then(function(){
     initPresetVideos();
     renderVideos();
     autoImportEpisodes();
