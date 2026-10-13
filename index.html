@@ -470,6 +470,18 @@
     if(hasD && (!hasF || directTime >= fileTime)) return directMap;
     return fileMap;
   }
+
+  // 直链寿命约 60 分钟。超过 45 分钟就视为「可能已过期」，
+  // 此时不赌它，直接改用原生播放器（跳转地址永远有效、全速），保证一定能播。
+  function directAgeMin(){
+    var t = Math.max(directTime || 0, fileTime || 0);
+    if(!t) return 9999;
+    return (Date.now() - t) / 60000;
+  }
+  function directFresh(){
+    if(!Object.keys(bestMap()).length) return false;
+    return directAgeMin() < 45;
+  }
   function epSrc(v){
     var d = bestMap()[v.videoId];
     if(d && d.url) return { url: d.url, kind: '直链' };
@@ -478,6 +490,7 @@
   // 选中某一集：立刻把它的地址装进播放器（不自动播，等你点视频里的三角）
   function prepareEpisode(v){
     if(!v || !v.videoId) return;
+    if(!directFresh()) return;   // 直链不新鲜就不预载，点播放时会走原生播放器
     var s = epSrc(v);
     player.dataset.line = v.line || 0;
     player.src = s.url;
@@ -487,6 +500,12 @@
   // 页面内播放：能精确读到进度，投屏走直链照样全速且不会触发乐播广告
   function playEpisode(v){
     if(!v || !v.videoId) return;
+    // 直链不可用/已过期 → 直接交给原生播放器，保证一定能播（代价：无进度同步）
+    if(!directFresh()){
+      hint('直链已过期，改用原生播放器打开（保证能播）');
+      castDouyin(v);
+      return;
+    }
     var s = epSrc(v);
     currentPlayV = v;
     player.dataset.line = v.line || 0;
@@ -945,7 +964,9 @@
       healing = false; btnPlay.textContent='⏸';
     }).catch(function(){
       healing = false;
-      hint('自动换新失败：请点「🔄 同步剧集库」，或稍后再试');
+      btnPlay.textContent = '▶';
+      hint('直链不可用，已用原生播放器打开（保证能播）');
+      if(currentPlayV) castDouyin(currentPlayV);
     });
   });
   player.addEventListener('loadedmetadata',function(){
