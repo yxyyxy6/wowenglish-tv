@@ -406,6 +406,7 @@
   var directMap = {};
   var directTime = 0;
   var healing = false;
+  var startedOk = false;   // 本集是否已真正播起来过（用于避免重复触发投屏广告）
   // 实时解析：页面需要播放时，临时去抖音要一次「当下最新」的直链
   var PROXIES = [
     function(u){ return 'https://api.allorigins.win/get?url=' + encodeURIComponent(u); },
@@ -511,8 +512,13 @@
     player.dataset.line = v.line || 0;
     player.dataset.stage = '';      // 直链→跳转 的回退进度
     player.dataset.tried = '';
-    player.src = s.url;
-    player.load();
+    // 关键：选中集数时已预载过（prepareEpisode），这里地址相同就不要再 load，
+    // 否则等于重复启动一次投屏会话，乐播会再放一次广告
+    if(player.src !== s.url){
+      startedOk = false;      // 换了新的一集，重置（同一集重复点播放则不重置）
+      player.src = s.url;
+      player.load();
+    }
     var p = player.play();
     if(p && p.then){
       p.then(function(){ btnPlay.textContent = '⏸'; })
@@ -943,6 +949,7 @@
     btnPlay.textContent='▶';
     if(!currentPlayV){ hint('视频加载失败，重新点「播放」试试'); return; }
     if(healing) return;
+    if(startedOk){ hint('播放中断（已播过，不重试以免重复触发投屏广告）'); return; }
     healing = true;
     hint('直链失效，正在自动换新…');
     // 两条通道都重载：仓库文件(稳定) + 实时解析(可能受代理影响)，取时间最新的那份
@@ -969,6 +976,7 @@
       if(currentPlayV) castDouyin(currentPlayV);
     });
   });
+  player.addEventListener('playing',function(){ startedOk = true; });
   player.addEventListener('loadedmetadata',function(){
     $('#airplayHint').textContent = '✅ 视频已加载，点 📡 按钮投屏到电视';
   });
